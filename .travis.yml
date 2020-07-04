@@ -1,0 +1,56 @@
+dist: trusty
+os: linux
+language: cpp
+compiler: gcc
+
+notifications:
+  email: false
+
+env:
+  global:
+    - DEPS_DIR=${TRAVIS_BUILD_DIR}/deps
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc-8
+      - g++-8
+      - cmake
+
+before_install:
+  - sudo apt-get update
+  - sudo apt-get update
+  - export CMAKE_OPTIONS=${CMAKE_OPTIONS}" "${ENV_CMAKE_OPTIONS}
+
+install:
+  # Download and install recent cmake
+  - |
+    if [[ ${TRAVIS_OS_NAME} == "linux" ]]; then
+      CMAKE_URL="http://cmake.org/files/v3.16/cmake-3.16.0-Linux-x86_64.tar.gz"
+      mkdir -p ${DEPS_DIR}/cmake
+      travis_retry wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C ${DEPS_DIR}/cmake
+      export PATH=${DEPS_DIR}/cmake/bin:${PATH}
+    fi
+  - sudo apt-get update
+
+before_script:
+  - export CC=/usr/bin/gcc-8
+  - export CXX=/usr/bin/g++-8
+
+  - gcc -v
+  - g++ -v
+  - cmake --version
+
+script:
+  - cd ${TRAVIS_BUILD_DIR}
+
+  - mkdir -p build
+  - cd build
+
+  - cmake .. ${CMAKE_OPTIONS} -DCMAKE_BUILD_TYPE=Debug
+  - make
+
+  - cd test
+  - ctest

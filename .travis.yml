@@ -51,8 +51,6 @@ script:
 
   - cmake .. ${CMAKE_OPTIONS} -DCMAKE_BUILD_TYPE=Debug
   - make
-  - ls
 
   - cd test
-  - ls
   - ./abby-test

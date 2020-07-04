@@ -3,7 +3,7 @@ project(abby-test)
 
 set(TEST_SOURCES
         unittest/test_main.cpp
-        unittest/hello_test.cpp)
+        unittest/abby_test.cpp)
 
 add_executable(${ABBY_TEST_TARGET} ${TEST_SOURCES})
 
@@ -21,4 +21,5 @@ target_include_directories(${ABBY_TEST_TARGET}
 
 target_link_libraries(${ABBY_TEST_TARGET}
         PUBLIC libDoctest
-        PUBLIC libEnTT)
+        PUBLIC libEnTT
+        PUBLIC libBOOST)

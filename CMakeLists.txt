@@ -20,6 +20,12 @@ set(INCLUDE_DIR ${ROOT_DIR}/include)
 
 add_header_only_lib(libEnTT ${LIBRARY_DIR}/entt ${LIBRARY_DIR}/entt/entt.hpp)
 
+set(BOOST_SOURCES
+        ${LIBRARY_DIR}/boost/assert.hpp
+        ${LIBRARY_DIR}/boost/config.hpp
+        ${LIBRARY_DIR}/boost/current_function.hpp)
+add_header_only_lib(libBOOST ${LIBRARY_DIR}/boost ${BOOST_SOURCES})
+
 # The various targets used
 set(ABBY_LIB_TARGET abby)
 set(ABBY_TEST_TARGET abby-test)

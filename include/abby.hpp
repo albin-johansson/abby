@@ -207,7 +207,6 @@ void insert_leaf(entt::registry& registry, const entt::entity leaf)
       }
     };
 
-    // Cost of descending to the left.
     const auto costLeft = getCost(leftNode);
     const auto costRight = getCost(rightNode);
 

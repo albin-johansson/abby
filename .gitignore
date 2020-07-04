@@ -37,3 +37,5 @@
 cmake-build-*
 build
 out
+docs/html
+docs/latex

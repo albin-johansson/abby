@@ -11,7 +11,9 @@ set_target_properties(${ABBY_TEST_TARGET} PROPERTIES
         CXX_STANDARD 17
         CXX_STANDARD_REQUIRED ON)
 
-add_header_only_lib(libDoctest doctest doctest/doctest.h)
+add_library(libDoctest INTERFACE)
+target_include_directories(libDoctest INTERFACE doctest)
+include(doctest)
 
 add_test(NAME ${ABBY_TEST_TARGET}
         COMMAND ${ABBY_TEST_TARGET})

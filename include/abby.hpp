@@ -103,16 +103,185 @@ struct aabb {
 
 namespace detail {
 
+struct root final {
+};
+
 struct node final {
   aabb aabb;
   entt::entity parent{entt::null};
   entt::entity leftChild{entt::null};
   entt::entity rightChild{entt::null};
+  int height{};
 };
+
+[[nodiscard]] auto center(const aabb& box) noexcept -> vec2
+{
+  const auto width = box.max.x - box.min.x;
+  const auto height = box.max.y - box.min.y;
+  return {width / 2.0f, height / 2.0f};
+};
+
+[[nodiscard]] auto area(const aabb& box) noexcept -> float
+{
+  const auto width = box.max.x - box.min.x;
+  const auto height = box.max.y - box.min.y;
+  return width * height;
+};
+
+[[nodiscard]] auto is_leaf(const detail::node& node) noexcept -> bool
+{
+  return node.leftChild == entt::null;
+}
+
+[[nodiscard]] auto is_leaf(entt::registry& registry,
+                           const entt::entity nodeEntity) noexcept -> bool
+{
+  const auto& node = registry.get<detail::node>(nodeEntity);
+  return is_leaf(node);
+}
+
+[[nodiscard]] auto merge(const aabb& fst, const aabb& snd) noexcept -> aabb
+{
+  aabb result;
+
+  result.min.x = std::min(fst.min.x, snd.min.x);
+  result.min.y = std::min(fst.min.y, snd.min.y);
+
+  result.max.x = std::max(fst.max.x, snd.max.x);
+  result.max.y = std::max(fst.max.y, snd.max.y);
+
+  result.area = area(result);
+  result.center = center(result);
+
+  return result;
+};
+
+[[nodiscard]] auto balance(entt::registry& registry,
+                           const entt::entity nodeEntity) -> entt::entity
+{
+  // TODO implement
+  return nodeEntity;
+}
+
+void insert_leaf(entt::registry& registry, const entt::entity leaf)
+{
+  if (registry.empty<detail::root>()) {
+    registry.emplace<detail::root>(leaf);
+    auto& leafNode = registry.get<detail::node>(leaf);
+    leafNode.parent = entt::null;
+    return;
+  }
+
+  // Find the best sibling for the node.
+  auto& leafNode = registry.get<detail::node>(leaf);
+  const auto& leafAABB = leafNode.aabb;
+
+  auto id = registry.view<detail::root>().front();
+  while (!detail::is_leaf(registry, id)) {
+    // Extract the children of the node.
+    const auto& node = registry.get<detail::node>(id);
+    const auto left = node.leftChild;
+    const auto right = node.rightChild;
+
+    const auto combinedAABB = detail::merge(node.aabb, leafAABB);
+
+    const auto combinedArea = detail::area(combinedAABB);
+
+    // Cost of creating a new parent for this node and the new leaf.
+    const auto cost = 2.0f * combinedArea;
+
+    // Minimum cost of pushing the leaf further down the tree.
+    const auto inheritanceCost = 2.0f * (combinedArea - node.aabb.area);
+
+    const auto& leftNode = registry.get<detail::node>(left);
+    const auto& rightNode = registry.get<detail::node>(right);
+
+    const auto getCost = [&](const detail::node& node) noexcept -> float {
+      const auto box = detail::merge(leafAABB, node.aabb);
+      if (detail::is_leaf(node)) {
+        return box.area + inheritanceCost;
+      } else {
+        const auto oldArea = leftNode.aabb.area;
+        const auto newArea = box.area;
+        return (newArea - oldArea) + inheritanceCost;
+      }
+    };
+
+    // Cost of descending to the left.
+    const auto costLeft = getCost(leftNode);
+    const auto costRight = getCost(rightNode);
+
+    // Descend according to the minimum cost.
+    if ((cost < costLeft) && (cost < costRight)) {
+      break;
+    } else {
+      if (costLeft < costRight) {
+        id = left;
+      } else {
+        id = right;
+      }
+    }
+  }
+
+  const auto sibling = id;
+  auto& siblingNode = registry.get<detail::node>(sibling);
+
+  // Create a new parent.
+  const auto oldParent = siblingNode.parent;
+  const auto newParent = registry.create();
+
+  auto& newParentNode = registry.emplace<detail::node>(newParent);
+  newParentNode.parent = oldParent;
+  newParentNode.aabb = detail::merge(leafAABB, siblingNode.aabb);
+  newParentNode.height = siblingNode.height + 1;
+
+  if (oldParent != entt::null) {
+    auto& oldParentNode = registry.get<detail::node>(oldParent);
+    if (oldParentNode.leftChild == sibling) {
+      oldParentNode.leftChild = newParent;
+    } else {
+      oldParentNode.rightChild = newParent;
+    }
+  } else {
+    // The sibling was the root.
+    registry.clear<detail::root>();
+    registry.emplace<detail::root>(newParent);
+  }
+
+  newParentNode.leftChild = sibling;
+  newParentNode.rightChild = leaf;
+  siblingNode.parent = newParent;
+  leafNode.parent = newParent;
+
+  // Walk back up the tree fixing heights and AABBs.
+  id = leafNode.parent;
+  while (id != entt::null) {
+    id = balance(registry, id);
+
+    auto& node = registry.get<detail::node>(id);
+
+    const auto left = node.leftChild;
+    const auto right = node.rightChild;
+
+    BOOST_ASSERT(left != entt::null);
+    BOOST_ASSERT(right != entt::null);
+
+    const auto& leftNode = registry.get<detail::node>(left);
+    const auto& rightNode = registry.get<detail::node>(right);
+
+    node.height = 1 + std::max(leftNode.height, rightNode.height);
+    node.aabb = detail::merge(leftNode.aabb, rightNode.aabb);
+
+    id = node.parent;
+  }
+}
 
 }  // namespace detail
 
 //! @endcond
+
+[[nodiscard]] auto make_aabb(const vec2& position, const vec2& size) noexcept
+    -> aabb;
 
 void insert(entt::registry& registry, entt::entity id, const aabb& box);
 
@@ -140,11 +309,39 @@ auto size(entt::registry& registry) -> int;
 
 }  // namespace abby
 
+auto abby::make_aabb(const abby::vec2& position,
+                     const abby::vec2& size) noexcept -> abby::aabb
+{
+  aabb result;
+
+  result.min.x = position.x;
+  result.min.y = position.y;
+
+  result.max.x = position.x + size.x;
+  result.max.y = position.y + size.y;
+
+  result.area = detail::area(result);
+  result.center = detail::center(result);
+
+  return result;
+}
+
 void abby::insert(entt::registry& registry,
                   entt::entity id,
                   const abby::aabb& box)
 {
-  assert(!registry.has<detail::node>(id));
+  BOOST_ASSERT_MSG(!registry.has<detail::node>(id),
+                   "Entity already associated with node!");
+
+  // TODO fatten the AABB?
+
+  auto& node = registry.emplace<detail::node>(id);
+  node.aabb = box;
+  node.aabb.center = detail::center(box);
+  node.aabb.area = detail::area(box);
+  node.height = 0;
+
+  detail::insert_leaf(registry, id);
 }
 
 void abby::remove(entt::registry& registry, entt::entity id)

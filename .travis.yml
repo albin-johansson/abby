@@ -55,4 +55,4 @@ script:
 
   - cd test
   - ls
-  - ctest
+  - ./abby-test

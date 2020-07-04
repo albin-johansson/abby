@@ -15,8 +15,6 @@ add_library(libDoctest INTERFACE)
 target_include_directories(libDoctest INTERFACE doctest)
 include(doctest)
 
-doctest_discover_tests(${ABBY_TEST_TARGET})
-
 target_include_directories(${ABBY_TEST_TARGET}
         PUBLIC unittest
         PUBLIC ${INCLUDE_DIR})

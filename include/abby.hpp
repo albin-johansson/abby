@@ -285,28 +285,6 @@ void insert_leaf(entt::registry& registry, const entt::entity leaf)
 
 void insert(entt::registry& registry, entt::entity id, const aabb& box);
 
-void remove(entt::registry& registry, entt::entity id);
-
-void remove_all(entt::registry& registry);
-
-void update(entt::registry& registry,
-            entt::entity id,
-            bool forceReinsert = false);
-
-auto query(entt::registry& registry, entt::entity id)
-    -> std::vector<entt::entity>;
-
-template <class Callback>
-void query(entt::registry& registry, entt::entity id, Callback&& callback);
-
-auto tree_height() -> int;
-
-auto tree_num_nodes() -> int;
-
-void rebuild();
-
-auto size(entt::registry& registry) -> int;
-
 }  // namespace abby
 
 auto abby::make_aabb(const abby::vec2& position,
@@ -342,43 +320,6 @@ void abby::insert(entt::registry& registry,
   node.height = 0;
 
   detail::insert_leaf(registry, id);
-}
-
-void abby::remove(entt::registry& registry, entt::entity id)
-{}
-
-void abby::remove_all(entt::registry& registry)
-{}
-
-void abby::update(entt::registry& registry, entt::entity id, bool forceReinsert)
-{}
-
-auto abby::query(entt::registry& registry, entt::entity id)
-    -> std::vector<entt::entity>
-{
-  return std::vector<entt::entity>();
-}
-
-template <class Callback>
-void abby::query(entt::registry& registry, entt::entity id, Callback&& callback)
-{}
-
-auto abby::tree_height() -> int
-{
-  return 0;
-}
-
-auto abby::tree_num_nodes() -> int
-{
-  return 0;
-}
-
-void abby::rebuild()
-{}
-
-auto abby::size(entt::registry& registry) -> int
-{
-  return 0;
 }
 
 #endif  // ABBY_HEADER_GUARD

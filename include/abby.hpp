@@ -33,6 +33,46 @@
 
 namespace abby {
 
+struct vec2 final {
+  float x{};
+  float y{};
+};
+
+/**
+ * @struct AABB
+ * @brief Represents an AABB (Axis Aligned Bounding Box).
+ *
+ * @details An AABB is really just a fancy rectangle. They are mainly used
+ * for collision detection systems, where trees can be built using AABBs in
+ * order to decrease the complexity of finding potential collision candidates
+ * . However, AABBs are not used for detailed collision detection. They are
+ * only used to find potential collisions, which are then checked using more
+ * exact collision detection systems.
+ *
+ * @note The "axis aligned" part is important, it means that the axes of the
+ * rectangles must be aligned (parallel in relation to each other).
+ * Otherwise, the systems that rely on AABBs won't work.
+ *
+ * @var AABB::min
+ * The minimum x- and y-coordinates. Which are the coordinates of the
+ * north-west corner of the box.
+ * @var AABB::max
+ * The maximum x- and y-coordinates. Which are the coordinates of the
+ * south-east corner of the box.
+ * @var AABB::center
+ * The coordinates of the center point of the box.
+ * @var AABB::area
+ * The area of the box.
+ *
+ * @headerfile abby.hpp
+ */
+struct AABB {
+  vec2 min;
+  vec2 max;
+  vec2 center;
+  float area{};
+};
+
 }  // namespace abby
 
 #endif  // ABBY_HEADER_GUARD

@@ -31,42 +31,67 @@
 
 #include <entt.hpp>
 
+/**
+ * @namespace abby
+ * @brief The top-level namespace that contains the components of the library.
+ */
 namespace abby {
 
+/**
+ * @struct vec2
+ *
+ * @brief Represents a simple floating-point 2-dimensional vector.
+ *
+ * @since 0.1.0
+ *
+ * @var vec2::x
+ * The x-coordinate of the vector.
+ *
+ * @var vec2::y
+ * The y-coordinate of the vector.
+ *
+ * @headerfile abby.hpp
+ */
 struct vec2 final {
   float x{};
   float y{};
 };
 
 /**
- * @struct AABB
+ * @struct aabb
+ *
  * @brief Represents an AABB (Axis Aligned Bounding Box).
  *
  * @details An AABB is really just a fancy rectangle. They are mainly used
  * for collision detection systems, where trees can be built using AABBs in
- * order to decrease the complexity of finding potential collision candidates
- * . However, AABBs are not used for detailed collision detection. They are
- * only used to find potential collisions, which are then checked using more
- * exact collision detection systems.
+ * order to decrease the complexity of finding potential collision candidates.
+ * However, AABBs are not used for detailed collision detection. They are only
+ * used to find potential collisions, which are then checked using more exact
+ * collision detection systems.
  *
  * @note The "axis aligned" part is important, it means that the axes of the
  * rectangles must be aligned (parallel in relation to each other).
  * Otherwise, the systems that rely on AABBs won't work.
  *
- * @var AABB::min
+ * @since 0.1.0
+ *
+ * @var aabb::min
  * The minimum x- and y-coordinates. Which are the coordinates of the
  * north-west corner of the box.
- * @var AABB::max
+ *
+ * @var aabb::max
  * The maximum x- and y-coordinates. Which are the coordinates of the
  * south-east corner of the box.
- * @var AABB::center
+ *
+ * @var aabb::center
  * The coordinates of the center point of the box.
- * @var AABB::area
+ *
+ * @var aabb::area
  * The area of the box.
  *
  * @headerfile abby.hpp
  */
-struct AABB {
+struct aabb {
   vec2 min;
   vec2 max;
   vec2 center;

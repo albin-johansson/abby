@@ -4,11 +4,30 @@
 
 using namespace abby;
 
+namespace {
+
+void validate_aabb(const aabb& current, const aabb& original)
+{
+  CHECK(current.min.x == original.min.x);
+  CHECK(current.min.y == original.min.y);
+
+  CHECK(current.max.x == original.max.x);
+  CHECK(current.max.y == original.max.y);
+
+  CHECK(current.area == original.area);
+
+  CHECK(current.center.x == original.center.x);
+  CHECK(current.center.y == original.center.y);
+}
+
+}  // namespace
+
 TEST_SUITE("abby")
 {
   TEST_CASE("abby::insert")
   {
     entt::registry registry;
+    const entt::entity null{entt::null};
 
     const auto fstID = registry.create();
     const auto fstBox = make_aabb({10, 10}, {100, 100});
@@ -21,26 +40,42 @@ TEST_SUITE("abby")
       CHECK(registry.size<detail::node>() == 1);
 
       const auto& node = registry.get<detail::node>(fstID);
-      const entt::entity null{entt::null};
 
       CHECK(node.parent == null);
       CHECK(node.leftChild == null);
       CHECK(node.rightChild == null);
-      CHECK(node.height == 0);
 
-      const auto& aabb = node.aabb;
-      CHECK(aabb.min.x == fstBox.min.x);
-      CHECK(aabb.min.y == fstBox.min.y);
-
-      CHECK(aabb.max.x == fstBox.max.x);
-      CHECK(aabb.max.y == fstBox.max.y);
-
-      CHECK(aabb.area == fstBox.area);
-
-      CHECK(aabb.center.x == fstBox.center.x);
-      CHECK(aabb.center.y == fstBox.center.y);
+      validate_aabb(node.aabb, fstBox);
     }
 
+    const auto sndID = registry.create();
+    const auto sndBox = make_aabb({110, 110}, {80, 80});
+
+    insert(registry, sndID, sndBox);
+
+    SUBCASE("State after adding two AABBs")
+    {
+      CHECK(!registry.empty<detail::root>());
+      CHECK(registry.size<detail::node>() == 3);
+
+      const auto& node = registry.get<detail::node>(sndID);
+
+      CHECK(node.parent == null);
+      CHECK(node.leftChild == null);
+      CHECK(node.rightChild == null);
+
+      validate_aabb(node.aabb, sndBox);
+    }
+
+    SUBCASE("Root after two AABBs added")
+    {
+      const auto root = registry.view<detail::root>().front();
+      const auto& rootNode = registry.get<detail::node>(root);
+
+      CHECK(rootNode.parent == null);
+      CHECK(rootNode.leftChild != null);
+      CHECK(rootNode.rightChild != null);
+    }
     // TODO test with more AABBs...
   }
 }

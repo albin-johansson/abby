@@ -114,6 +114,12 @@ struct node final {
   int height{};
 };
 
+auto get_node(entt::registry& registry, const entt::entity nodeEntity)
+-> detail::node&
+{
+  return registry.get<detail::node>(nodeEntity);
+}
+
 [[nodiscard]] auto center(const aabb& box) noexcept -> vec2
 {
   const auto width = box.max.x - box.min.x;
@@ -136,7 +142,7 @@ struct node final {
 [[nodiscard]] auto is_leaf(entt::registry& registry,
                            const entt::entity nodeEntity) noexcept -> bool
 {
-  const auto& node = registry.get<detail::node>(nodeEntity);
+  const auto& node = get_node(registry, nodeEntity);
   return is_leaf(node);
 }
 
@@ -156,30 +162,142 @@ struct node final {
   return result;
 };
 
+void set_root(entt::registry& registry, const entt::entity nodeEntity)
+{
+  registry.clear<detail::root>();
+  registry.emplace<detail::root>(nodeEntity);
+}
+
 [[nodiscard]] auto balance(entt::registry& registry,
                            const entt::entity nodeEntity) -> entt::entity
 {
-  // TODO implement
+  auto& node = get_node(registry, nodeEntity);
+
+  if (is_leaf(node) || node.height < 2) {
+    return nodeEntity;
+  }
+
+  const auto left = node.leftChild;
+  const auto right = node.rightChild;
+
+  auto& leftNode = get_node(registry, left);
+  auto& rightNode = get_node(registry, right);
+
+  const auto currentBalance = rightNode.height - leftNode.height;
+
+  // Rotate right branch up.
+  if (currentBalance > 1) {
+    const auto rightLeft = rightNode.leftChild;
+    const auto rightRight = rightNode.rightChild;
+
+    // Swap node and its right-hand child.
+    rightNode.leftChild = nodeEntity;
+    rightNode.parent = node.parent;
+    node.parent = right;
+
+    // The node's old parent should now point to its right-hand child.
+    if (rightNode.parent != entt::null) {
+      auto& rightParentNode = get_node(registry, rightNode.parent);
+      if (rightParentNode.leftChild == nodeEntity) {
+        rightParentNode.leftChild = right;
+      } else {
+        BOOST_ASSERT(rightParentNode.rightChild == nodeEntity);
+        rightParentNode.rightChild = right;
+      }
+    } else {
+      registry.clear<detail::root>();
+      registry.emplace<detail::root>(right);
+    }
+
+    // Rotate.
+    auto& rightLeftNode = get_node(registry, rightLeft);
+    auto& rightRightNode = get_node(registry, rightRight);
+    if (rightLeftNode.height > rightRightNode.height) {
+      rightNode.rightChild = rightLeft;
+      node.rightChild = rightRight;
+      rightRightNode.parent = nodeEntity;
+
+      node.aabb = detail::merge(leftNode.aabb, rightRightNode.aabb);
+      rightNode.aabb = detail::merge(node.aabb, rightLeftNode.aabb);
+
+      node.height = 1 + std::max(leftNode.height, rightRightNode.height);
+      rightNode.height = 1 + std::max(node.height, rightLeftNode.height);
+    } else {
+      rightNode.rightChild = rightRight;
+      node.rightChild = rightLeft;
+      rightLeftNode.parent = nodeEntity;
+
+      node.aabb = detail::merge(leftNode.aabb, rightLeftNode.aabb);
+      rightNode.aabb = detail::merge(node.aabb, rightRightNode.aabb);
+
+      node.height = 1 + std::max(leftNode.height, rightLeftNode.height);
+      rightNode.height = 1 + std::max(node.height, rightRightNode.height);
+    }
+
+    return right;
+  }
+
+  // Rotate left branch up.
+  if (currentBalance < -1) {
+    const auto leftLeft = leftNode.leftChild;
+    const auto leftRight = leftNode.rightChild;
+
+    // Swap node and its left-hand child.
+    leftNode.leftChild = nodeEntity;
+    leftNode.parent = node.parent;
+    node.parent = left;
+
+    // The node's old parent should now point to its left-hand child.
+    if (leftNode.parent != entt::null) {
+      auto& leftParentNode = get_node(registry, leftNode.parent);
+      if (leftParentNode.leftChild == nodeEntity) {
+        leftParentNode.leftChild = left;
+      } else {
+        BOOST_ASSERT(leftParentNode.rightChild == nodeEntity);
+        leftParentNode.rightChild = left;
+      }
+    } else {
+      set_root(registry, left);
+    }
+
+    // Rotate.
+    auto& leftLeftNode = get_node(registry, leftLeft);
+    auto& leftRightNode = get_node(registry, leftRight);
+    if (leftLeftNode.height > leftRightNode.height) {
+      leftNode.rightChild = leftLeft;
+      node.leftChild = leftRight;
+      leftRightNode.parent = nodeEntity;
+
+      node.aabb = detail::merge(rightNode.aabb, leftRightNode.aabb);
+      leftNode.aabb = detail::merge(node.aabb, leftLeftNode.aabb);
+
+      node.height = 1 + std::max(rightNode.height, leftRightNode.height);
+      leftNode.height = 1 + std::max(node.height, leftLeftNode.height);
+    } else {
+      leftNode.rightChild = leftRight;
+      node.leftChild = leftLeft;
+      leftLeftNode.parent = nodeEntity;
+
+      node.aabb = detail::merge(rightNode.aabb, leftLeftNode.aabb);
+      leftNode.aabb = detail::merge(node.aabb, leftRightNode.aabb);
+
+      node.height = 1 + std::max(rightNode.height, leftLeftNode.height);
+      leftNode.height = 1 + std::max(node.height, leftRightNode.height);
+    }
+
+    return left;
+  }
+
   return nodeEntity;
 }
 
-void insert_leaf(entt::registry& registry, const entt::entity leaf)
+auto find_best_sibling(entt::registry& registry, const aabb& leafAABB)
+    -> entt::entity
 {
-  if (registry.empty<detail::root>()) {
-    registry.emplace<detail::root>(leaf);
-    auto& leafNode = registry.get<detail::node>(leaf);
-    leafNode.parent = entt::null;
-    return;
-  }
-
-  // Find the best sibling for the node.
-  auto& leafNode = registry.get<detail::node>(leaf);
-  const auto& leafAABB = leafNode.aabb;
-
   auto id = registry.view<detail::root>().front();
   while (!detail::is_leaf(registry, id)) {
     // Extract the children of the node.
-    const auto& node = registry.get<detail::node>(id);
+    const auto& node = get_node(registry, id);
     const auto left = node.leftChild;
     const auto right = node.rightChild;
 
@@ -193,8 +311,8 @@ void insert_leaf(entt::registry& registry, const entt::entity leaf)
     // Minimum cost of pushing the leaf further down the tree.
     const auto inheritanceCost = 2.0f * (combinedArea - node.aabb.area);
 
-    const auto& leftNode = registry.get<detail::node>(left);
-    const auto& rightNode = registry.get<detail::node>(right);
+    const auto& leftNode = get_node(registry, left);
+    const auto& rightNode = get_node(registry, right);
 
     const auto getCost = [&](const detail::node& node) noexcept -> float {
       const auto box = detail::merge(leafAABB, node.aabb);
@@ -221,9 +339,48 @@ void insert_leaf(entt::registry& registry, const entt::entity leaf)
       }
     }
   }
+  return id;
+}
 
-  const auto sibling = id;
-  auto& siblingNode = registry.get<detail::node>(sibling);
+void fix_tree_upwards(entt::registry& registry, entt::entity id)
+{
+  // Walk back up the tree fixing heights and AABBs.
+  while (id != entt::null) {
+    id = balance(registry, id);
+
+    auto& node = get_node(registry, id);
+
+    const auto left = node.leftChild;
+    const auto right = node.rightChild;
+
+    BOOST_ASSERT(left != entt::null);
+    BOOST_ASSERT(right != entt::null);
+
+    const auto& leftNode = get_node(registry, left);
+    const auto& rightNode = get_node(registry, right);
+
+    node.height = 1 + std::max(leftNode.height, rightNode.height);
+    node.aabb = detail::merge(leftNode.aabb, rightNode.aabb);
+
+    id = node.parent;
+  }
+}
+
+void insert_leaf(entt::registry& registry, const entt::entity leaf)
+{
+  if (registry.empty<detail::root>()) {
+    registry.emplace<detail::root>(leaf);
+    auto& leafNode = get_node(registry, leaf);
+    leafNode.parent = entt::null;
+    return;
+  }
+
+  // Find the best sibling for the node.
+  auto& leafNode = get_node(registry, leaf);
+  const auto& leafAABB = leafNode.aabb;
+
+  const auto sibling = find_best_sibling(registry, leafAABB);
+  auto& siblingNode = get_node(registry, sibling);
 
   // Create a new parent.
   const auto oldParent = siblingNode.parent;
@@ -235,7 +392,7 @@ void insert_leaf(entt::registry& registry, const entt::entity leaf)
   newParentNode.height = siblingNode.height + 1;
 
   if (oldParent != entt::null) {
-    auto& oldParentNode = registry.get<detail::node>(oldParent);
+    auto& oldParentNode = get_node(registry, oldParent);
     if (oldParentNode.leftChild == sibling) {
       oldParentNode.leftChild = newParent;
     } else {
@@ -243,8 +400,7 @@ void insert_leaf(entt::registry& registry, const entt::entity leaf)
     }
   } else {
     // The sibling was the root.
-    registry.clear<detail::root>();
-    registry.emplace<detail::root>(newParent);
+    set_root(registry, newParent);
   }
 
   newParentNode.leftChild = sibling;
@@ -252,27 +408,7 @@ void insert_leaf(entt::registry& registry, const entt::entity leaf)
   siblingNode.parent = newParent;
   leafNode.parent = newParent;
 
-  // Walk back up the tree fixing heights and AABBs.
-  id = leafNode.parent;
-  while (id != entt::null) {
-    id = balance(registry, id);
-
-    auto& node = registry.get<detail::node>(id);
-
-    const auto left = node.leftChild;
-    const auto right = node.rightChild;
-
-    BOOST_ASSERT(left != entt::null);
-    BOOST_ASSERT(right != entt::null);
-
-    const auto& leftNode = registry.get<detail::node>(left);
-    const auto& rightNode = registry.get<detail::node>(right);
-
-    node.height = 1 + std::max(leftNode.height, rightNode.height);
-    node.aabb = detail::merge(leftNode.aabb, rightNode.aabb);
-
-    id = node.parent;
-  }
+  fix_tree_upwards(registry, leafNode.parent);
 }
 
 }  // namespace detail

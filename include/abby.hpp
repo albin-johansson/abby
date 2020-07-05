@@ -115,7 +115,7 @@ struct node final {
 };
 
 auto get_node(entt::registry& registry, const entt::entity nodeEntity)
--> detail::node&
+    -> detail::node&
 {
   return registry.get<detail::node>(nodeEntity);
 }

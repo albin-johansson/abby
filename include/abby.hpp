@@ -107,7 +107,7 @@ struct root final {
 };
 
 struct node final {
-  aabb aabb;
+  abby::aabb aabb;
   entt::entity parent{entt::null};
   entt::entity leftChild{entt::null};
   entt::entity rightChild{entt::null};

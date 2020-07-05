@@ -420,6 +420,8 @@ void insert_leaf(entt::registry& registry, const entt::entity leaf)
 
 void insert(entt::registry& registry, entt::entity id, const aabb& box);
 
+void remove_all(entt::registry& registry);
+
 }  // namespace abby
 
 auto abby::make_aabb(const abby::vec2& position,
@@ -455,6 +457,12 @@ void abby::insert(entt::registry& registry,
   node.height = 0;
 
   detail::insert_leaf(registry, id);
+}
+
+void abby::remove_all(entt::registry& registry)
+{
+  registry.clear<detail::node>();
+  registry.clear<detail::root>();
 }
 
 #endif  // ABBY_HEADER_GUARD

@@ -20,6 +20,4 @@ target_include_directories(${ABBY_TEST_TARGET}
         PUBLIC ${INCLUDE_DIR})
 
 target_link_libraries(${ABBY_TEST_TARGET}
-        PUBLIC libDoctest
-        PUBLIC libEnTT
-        PUBLIC libBOOST)
+        PUBLIC libDoctest)

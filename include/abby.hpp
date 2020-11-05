@@ -23,6 +23,7 @@
  *
  */
 
+#include <cassert>   // assert
 #include <map>       // map
 #include <optional>  // optional
 #include <vector>    // vector
@@ -75,14 +76,13 @@ class aabb_tree final
  public:
   using key_type = Key;
   using size_type = std::size_t;
-  using aabb_type = aabb<T>;
   using vector_type = vec2<T>;
+  using aabb_type = aabb<T>;
+  using node_type = aabb_node<key_type, T>;
   using index_type = int;
 
   void insert(const key_type& key, const aabb_type& box)
-  {
-    
-  }
+  {}
 
   void remove(const key_type& key)
   {}
@@ -113,15 +113,74 @@ class aabb_tree final
   }
 
  private:
+  using opt_index = std::optional<index_type>;
+
   std::map<key_type, index_type> m_indexMap;
   std::vector<aabb_type> m_nodes;
 
-  std::optional<index_type> m_rootIndex{};
-  std::optional<index_type> m_nextFreeNodeIndex{};
+  opt_index m_rootIndex{};
+  opt_index m_nextFreeNodeIndex{};
 
   size_type m_allocatedNodes{};
   size_type m_nodeCapacity{24};
   size_type m_growthSize{m_nodeCapacity};
+
+  void grow_pool()
+  {
+    assert(m_allocatedNodes == m_nodeCapacity);
+
+    m_nodeCapacity += m_growthSize;
+    m_nodes.resize(m_nodeCapacity);
+
+    for (index_type index = m_allocatedNodes; index < m_nodeCapacity; ++index) {
+      auto& node = m_nodes.at(index);
+      node.next = index + 1;
+    }
+
+    m_nodes.at(m_nodeCapacity - 1).next.reset();
+    m_nextFreeNodeIndex = m_allocatedNodes;
+  }
+
+  [[nodiscard]] auto allocate_node() -> index_type
+  {
+    // if we have no free tree nodes then grow the pool
+    if (!m_nextFreeNodeIndex.has_value()) {
+      grow_pool();
+    }
+
+    const auto index = m_nextFreeNodeIndex.value();
+    const auto& node = m_nodes.at(index);
+    m_nextFreeNodeIndex = node.next;
+    ++m_allocatedNodes;
+
+    return index;
+  }
+
+  void deallocate_node(index_type nodeIndex)
+  {
+    auto& node = m_nodes.at(nodeIndex);
+    node.next = m_nextFreeNodeIndex;
+    m_nextFreeNodeIndex = nodeIndex;
+    --m_allocatedNodes;
+  }
+
+  void fix_upwards_tree(opt_index nodeIndex)
+  {}
+
+  [[nodiscard]] auto find_best_insertion_position(const node_type& leafNode)
+      -> index_type
+  {
+    return 0;
+  }
+
+  void insert_leaf(index_type leaf)
+  {}
+
+  void remove_leaf(index_type leaf)
+  {}
+
+  void update_leaf(index_type leaf, const aabb_type& box)
+  {}
 };
 
 }  // namespace abby

@@ -83,11 +83,59 @@ template <typename T>
   return !(lhs == rhs);
 }
 
+/**
+ * \struct aabb
+ *
+ * \brief Represents an AABB (Axis Aligned Bounding Box).
+ *
+ * \note This is really just a glorified rectangle.
+ *
+ * \tparam T the representation type of the components used by the AABB.
+ *
+ * \since 0.1.0
+ *
+ * \see faabb
+ * \see daabb
+ *
+ * \headerfile abby.hpp
+ */
 template <typename T = float>
 struct aabb final
 {
-  vec2<T> min;
-  vec2<T> max;
+  vec2<T> min;  ///< The top-left corner of the AABB.
+  vec2<T> max;  ///< The bottom-right corner of the AABB.
+
+  [[nodiscard]] constexpr auto contains(const aabb<T>& other) const noexcept
+      -> bool
+  {
+    return (other.min.x >= min.x) && (other.max.x <= max.x) &&
+           (other.min.y >= min.y) && (other.max.y <= max.y);
+  }
+
+  [[nodiscard]] constexpr auto overlaps(const aabb<T>& other) const noexcept
+      -> bool
+  {
+    return (max.x > other.min.x) && (min.x < other.max.x) &&
+           (max.y > other.min.y) && (min.y < other.max.y);
+  }
+
+  /**
+   * \brief Returns the area of the AABB.
+   *
+   * \note The area is not stored in the object, so it is computed for every
+   * invocation of this function. This is of course not an expensive operation,
+   * but it is worth knowing.
+   *
+   * \return the area of the AABB.
+   *
+   * \since 0.1.0
+   */
+  [[nodiscard]] constexpr auto area() const noexcept -> T
+  {
+    const auto width = max.x - min.x;
+    const auto height = max.y - min.y;
+    return width * height;
+  }
 };
 
 using faabb = aabb<float>;
@@ -120,14 +168,6 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] constexpr auto area_of(const aabb<T>& aabb) noexcept -> T
-{
-  const auto width = aabb.max.x - aabb.min.x;
-  const auto height = aabb.max.y - aabb.min.y;
-  return width * height;
-}
-
-template <typename T>
 [[nodiscard]] constexpr auto combine(const aabb<T>& fst,
                                      const aabb<T>& snd) noexcept -> aabb<T>
 {
@@ -140,22 +180,6 @@ template <typename T>
   result.max.y = std::max(fst.max.y, snd.max.y);
 
   return result;
-}
-
-template <typename T>
-[[nodiscard]] constexpr auto contains(const aabb<T>& source,
-                                      const aabb<T>& other) noexcept -> bool
-{
-  return (other.min.x >= source.min.x) && (other.max.x <= source.max.x) &&
-         (other.min.y >= source.min.y) && (other.max.y <= source.max.y);
-}
-
-template <typename T>
-[[nodiscard]] constexpr auto overlaps(const aabb<T>& fst,
-                                      const aabb<T>& snd) noexcept -> bool
-{
-  return (fst.max.x > snd.min.x) && (fst.min.x < snd.max.x) &&
-         (fst.max.y > snd.min.y) && (fst.min.y < snd.max.y);
 }
 
 /**
@@ -203,10 +227,10 @@ template <typename T, typename U>
                                            float minimumCost) -> float
 {
   if (left.is_leaf()) {
-    return area_of(combine(leaf.box, left.box)) + minimumCost;
+    return combine(leaf.box, left.box).area() + minimumCost;
   } else {
     const auto newLeftAabb = combine(leaf.box, left.box);
-    return (area_of(newLeftAabb) - area_of(left.box)) + minimumCost;
+    return (newLeftAabb.area() - left.box.area()) + minimumCost;
   }
 }
 
@@ -216,10 +240,10 @@ template <typename T, typename U>
                                             float minimumCost) -> float
 {
   if (right.is_leaf()) {
-    return area_of(combine(leaf.box, right.box)) + minimumCost;
+    return combine(leaf.box, right.box).area() + minimumCost;
   } else {
     const auto newRightAabb = combine(leaf.box, right.box);
-    return (area_of(newRightAabb) - area_of(right.box)) + minimumCost;
+    return (newRightAabb.area() - right.box.area()) + minimumCost;
   }
 }
 
@@ -401,7 +425,7 @@ class aabb_tree final
       }
 
       const auto& node = m_nodes.at(*nodeIndex);
-      if (overlaps(node.box, box)) {
+      if (node.box.overlaps(box)) {
         if (node.is_leaf() && node.id != key) {
           *iterator = node.id;
           ++iterator;
@@ -541,9 +565,9 @@ class aabb_tree final
 
       const auto combined = combine(treeNode.box, leafNode.box);
 
-      const auto newParentNodeCost = 2.0f * area_of(combined);
+      const auto newParentNodeCost = 2.0f * combined.area();
       const auto minimumPushDownCost =
-          2.0f * (area_of(combined) - area_of(treeNode.box));
+          2.0f * (combined.area() - treeNode.box.area());
 
       // use the costs to figure out whether to create a new parent here or
       // descend
@@ -673,7 +697,7 @@ class aabb_tree final
     auto& node = m_nodes.at(leafIndex);
 
     // if the node contains the new aabb then we just leave things
-    if (contains(node.box, box)) {
+    if (node.box.contains(box)) {
       return;
     }
 

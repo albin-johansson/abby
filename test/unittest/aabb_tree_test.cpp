@@ -64,7 +64,7 @@ TEST_SUITE("aabb_tree")
       const auto& actual = tree.get_aabb(id);
       CHECK(original.min == actual.min);
       CHECK(original.max == actual.max);
-      CHECK(abby::area_of(original) == abby::area_of(actual));
+      CHECK(original.area() == actual.area());
     }
 
     SUBCASE("Update to larger AABB")
@@ -75,7 +75,7 @@ TEST_SUITE("aabb_tree")
       const auto& actual = tree.get_aabb(id);
       CHECK(large.min == actual.min);
       CHECK(large.max == actual.max);
-      CHECK(abby::area_of(large) == abby::area_of(actual));
+      CHECK(large.area() == actual.area());
     }
   }
 

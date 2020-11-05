@@ -71,18 +71,18 @@ TEST_SUITE("aabb")
     CHECK(aabb.max - aabb.min == size);
   }
 
-  TEST_CASE("area_of")
+  TEST_CASE("aabb::area")
   {
     SUBCASE("Empty")
     {
       const abby::faabb empty;
-      CHECK(abby::area_of(empty) == 0);
+      CHECK(empty.area() == 0);
     }
 
     SUBCASE("Non-empty")
     {
       const auto aabb = abby::make_aabb<float>({10, 25}, {100, 75});
-      const auto area = abby::area_of(aabb);
+      const auto area = aabb.area();
 
       const auto diff = aabb.max - aabb.min;
       CHECK(area == diff.x * diff.y);
@@ -101,63 +101,63 @@ TEST_SUITE("aabb")
     CHECK(combined.max.y == std::max(fst.max.y, snd.max.y));
   }
 
-  TEST_CASE("contains")
+  TEST_CASE("aabb::contains")
   {
     SUBCASE("Self")
     {
       const auto aabb = abby::make_aabb<float>({0, 0}, {10, 10});
-      CHECK(abby::contains(aabb, aabb));
+      CHECK(aabb.contains(aabb));
     }
 
     SUBCASE("Aligned borders")
     {
       const auto fst = abby::make_aabb<float>({0, 0}, {10, 10});
       const auto snd = abby::make_aabb<float>({5, 5}, {5, 5});
-      CHECK(abby::contains(fst, snd));
+      CHECK(fst.contains(snd));
     }
 
     SUBCASE("1 pixel outside")
     {
       const auto fst = abby::make_aabb<float>({0, 0}, {10, 10});
       const auto snd = abby::make_aabb<float>({6, 6}, {5, 5});
-      CHECK(!abby::contains(fst, snd));
+      CHECK(!fst.contains(snd));
     }
 
     SUBCASE("1 pixel margin")
     {
       const auto fst = abby::make_aabb<float>({0, 0}, {10, 10});
       const auto snd = abby::make_aabb<float>({4, 4}, {5, 5});
-      CHECK(abby::contains(fst, snd));
+      CHECK(fst.contains(snd));
     }
   }
 
-  TEST_CASE("overlaps")
+  TEST_CASE("aabb::overlaps")
   {
     SUBCASE("Self")
     {
       const auto aabb = abby::make_aabb<float>({0, 0}, {10, 10});
-      CHECK(abby::overlaps(aabb, aabb));
+      CHECK(aabb.overlaps(aabb));
     }
 
     SUBCASE("Aligned borders")
     {
       const auto fst = abby::make_aabb<float>({0, 0}, {10, 10});
       const auto snd = abby::make_aabb<float>({5, 5}, {5, 5});
-      CHECK(abby::overlaps(fst, snd));
+      CHECK(fst.overlaps(snd));
     }
 
     SUBCASE("1 pixel outside")
     {
       const auto fst = abby::make_aabb<float>({0, 0}, {10, 10});
       const auto snd = abby::make_aabb<float>({6, 6}, {5, 5});
-      CHECK(abby::overlaps(fst, snd));
+      CHECK(fst.overlaps(snd));
     }
 
     SUBCASE("1 pixel margin")
     {
       const auto fst = abby::make_aabb<float>({0, 0}, {10, 10});
       const auto snd = abby::make_aabb<float>({4, 4}, {5, 5});
-      CHECK(abby::overlaps(fst, snd));
+      CHECK(fst.overlaps(snd));
     }
   }
 }

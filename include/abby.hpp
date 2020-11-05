@@ -178,6 +178,15 @@ struct aabb_node final
   opt_int right;
   opt_int next;
 
+  /**
+   * \brief Indicates whether or not the node is a leaf node.
+   *
+   * \details A node is a leaf node if it has no left child node.
+   *
+   * \return `true` if the node is a leaf node; `false` otherwise.
+   *
+   * \since 0.1.0
+   */
   [[nodiscard]] constexpr auto is_leaf() const noexcept -> bool
   {
     return !left;

@@ -182,10 +182,48 @@ class aabb_tree final
     }
   }
 
-  [[nodiscard]] auto find_best_insertion_position(const node_type& leafNode)
-      -> index_type
+  [[nodiscard]] auto find_best_insertion_position(
+      const node_type& leafNode) const -> index_type
   {
-    return 0;
+    auto treeNodeIndex = m_rootIndex.value();
+    while (!is_leaf(m_nodes.at(treeNodeIndex))) {
+      // because of the test in the while loop above we know we are never a leaf
+      // inside it
+      const auto& treeNode = m_nodes.at(treeNodeIndex);
+      const auto leftNodeIndex = treeNode.left.value();
+      const auto rightNodeIndex = treeNode.right.value();
+      const auto& leftNode = m_nodes.at(leftNodeIndex);
+      const auto& rightNode = m_nodes.at(rightNodeIndex);
+
+      const auto combined = merge(treeNode.box, leafNode.box);
+
+      const auto newParentNodeCost = 2.0f * combined.area;
+      const auto minimumPushDownCost =
+          2.0f * (combined.area - treeNode.box.area);
+
+      // use the costs to figure out whether to create a new parent here or
+      // descend
+      const auto costLeft =
+          get_left_cost(leftNode, leafNode, minimumPushDownCost);
+      const auto costRight =
+          get_right_cost(rightNode, leafNode, minimumPushDownCost);
+
+      // if the cost of creating a new parent node here is less than descending
+      // in either direction then we know we need to create a new parent node
+      // here and attach the leaf to that
+      if (newParentNodeCost < costLeft && newParentNodeCost < costRight) {
+        break;
+      }
+
+      // otherwise descend in the cheapest direction
+      if (costLeft < costRight) {
+        treeNodeIndex = leftNodeIndex;
+      } else {
+        treeNodeIndex = rightNodeIndex;
+      }
+    }
+
+    return treeNodeIndex;
   }
 
   void insert_leaf(index_type leaf)

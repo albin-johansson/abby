@@ -1,8 +1,8 @@
-#include "abby.hpp"
-
 #include <doctest.h>
 
 #include <iterator>
+
+#include "abby.hpp"
 
 TEST_SUITE("aabb_tree")
 {
@@ -22,32 +22,32 @@ TEST_SUITE("aabb_tree")
     CHECK(tree.size() == 3);
   }
 
-  TEST_CASE("aabb_tree::remove")
+  TEST_CASE("aabb_tree::erase")
   {
     abby::aabb_tree<int> tree;
-    CHECK_NOTHROW(tree.remove(-1));
-    CHECK_NOTHROW(tree.remove(0));
-    CHECK_NOTHROW(tree.remove(1));
+    CHECK_NOTHROW(tree.erase(-1));
+    CHECK_NOTHROW(tree.erase(0));
+    CHECK_NOTHROW(tree.erase(1));
 
     tree.insert(4, abby::make_aabb<float>({0, 0}, {10, 10}));
     tree.insert(7, abby::make_aabb<float>({120, 33}, {50, 50}));
     CHECK(tree.size() == 2);
 
-    tree.remove(4);
+    tree.erase(4);
     CHECK(tree.size() == 1);
 
-    CHECK_NOTHROW(tree.remove(4));
+    CHECK_NOTHROW(tree.erase(4));
     CHECK(tree.size() == 1);
 
-    tree.remove(7);
+    tree.erase(7);
     CHECK(tree.size() == 0);
     CHECK(tree.is_empty());
   }
 
-  TEST_CASE("aabb_tree::update")
+  TEST_CASE("aabb_tree::replace")
   {
     abby::aabb_tree<int> tree;
-    CHECK_NOTHROW(tree.update(0, {}));
+    CHECK_NOTHROW(tree.replace(0, {}));
 
     tree.insert(35, abby::make_aabb<float>({34, 63}, {31, 950}));
     tree.insert(99, abby::make_aabb<float>({2, 412}, {78, 34}));
@@ -59,8 +59,7 @@ TEST_SUITE("aabb_tree")
     SUBCASE("Update to smaller AABB")
     {
       // When the new AABB is smaller, nothing is done
-      const auto small = abby::make_aabb<float>({10, 10}, {50, 50});
-      tree.update(id, small);
+      tree.replace(id, abby::make_aabb<float>({10, 10}, {50, 50}));
 
       const auto& actual = tree.get_aabb(id);
       CHECK(original.min == actual.min);
@@ -71,7 +70,7 @@ TEST_SUITE("aabb_tree")
     SUBCASE("Update to larger AABB")
     {
       const auto large = abby::make_aabb<float>({20, 20}, {150, 150});
-      tree.update(id, large);
+      tree.replace(id, large);
 
       const auto& actual = tree.get_aabb(id);
       CHECK(large.min == actual.min);
@@ -152,10 +151,10 @@ TEST_SUITE("aabb_tree")
     tree.insert(1, {});
     CHECK(tree.size() == 2);
 
-    tree.remove(1);
+    tree.erase(1);
     CHECK(tree.size() == 1);
 
-    tree.remove(0);
+    tree.erase(0);
     CHECK(tree.size() == 0);
   }
 
@@ -167,7 +166,7 @@ TEST_SUITE("aabb_tree")
     tree.insert(123, {});
     CHECK(!tree.is_empty());
 
-    tree.remove(123);
+    tree.erase(123);
     CHECK(tree.is_empty());
   }
 }

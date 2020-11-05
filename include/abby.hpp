@@ -32,7 +32,6 @@
 #include <cassert>          // assert
 #include <cstddef>          // byte
 #include <deque>            // deque
-#include <iterator>         // back_inserter
 #include <map>              // map
 #include <memory_resource>  // monotonic_buffer_resource
 #include <optional>         // optional
@@ -213,6 +212,20 @@ template <typename T, typename U>
   }
 }
 
+/**
+ * \class aabb_tree
+ *
+ * \brief Represents a tree of AABBs used for efficient collision detection.
+ *
+ * \tparam Key the type of the keys associated with each node. Must be
+ * comparable and preferable small and cheap to copy, e.g. `int`.
+ * \tparam T the representation type used by the AABBs, should be a
+ * floating-point type for best precision.
+ *
+ * \since 0.1.0
+ *
+ * \headerfile abby.hpp
+ */
 template <typename Key, typename T = float>
 class aabb_tree final
 {
@@ -241,6 +254,16 @@ class aabb_tree final
     m_nodes.at(size - 1).next.reset();
   }
 
+  /**
+   * \brief Inserts an AABB in the tree.
+   *
+   * \pre `key` cannot be in use at the time of invoking the function.
+   *
+   * \param key the ID that will be associated with the box.
+   * \param box the AABB that will be added.
+   *
+   * \since 0.1.0
+   */
   void insert(const key_type& key, const aabb_type& box)
   {
     assert(!m_indexMap.count(key));
@@ -254,7 +277,17 @@ class aabb_tree final
     m_indexMap.emplace(key, index);
   }
 
-  void remove(const key_type& key)
+  /**
+   * \brief Removes the AABB associated with the specified ID.
+   *
+   * \note This function has no effect if there is no AABB associated with the
+   * specified ID.
+   *
+   * \param key the ID associated with the AABB that will be removed.
+   *
+   * \since 0.1.0
+   */
+  void erase(const key_type& key)
   {
     if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
       const auto index = it->second;
@@ -264,13 +297,36 @@ class aabb_tree final
     }
   }
 
-  void update(const key_type& key, const aabb_type& box)
+  /**
+   * \brief Replaces the AABB associated with the specified ID.
+   *
+   * \note This function has no effect if there is no AABB associated with the
+   * specified ID.
+   *
+   * \param key the ID associated with the AABB that will be replaced.
+   * \param box the new AABB that will be associated with the specified ID.
+   *
+   * \since 0.1.0
+   */
+  void replace(const key_type& key, const aabb_type& box)
   {
     if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
       update_leaf(it->second, box);
     }
   }
 
+  /**
+   * \brief Updates the position of the AABB associated with the specified ID.
+   *
+   * \note This function has no effect if there is no AABB associated with the
+   * specified ID.
+   *
+   * \param key the ID associated with the AABB that will be moved.
+   * \param position the new position of the AABB associated with the specified
+   * ID.
+   *
+   * \since 0.1.0
+   */
   void set_position(const key_type& key, const vector_type& position)
   {
     if (!m_indexMap.count(key)) {
@@ -283,15 +339,32 @@ class aabb_tree final
     newBox.min = position;
     newBox.max = position + (previous.max - previous.min);
 
-    //    const auto width = newBox.max.x() - newBox.min.x();
-    //    const auto height = newBox.max.y() - newBox.min.y();
-    //    newBox.area = width * height;
-
-    update(key, newBox);
+    replace(key, newBox);
   }
 
   void query_collisions(const key_type&, nullptr_t) const = delete;
 
+  /**
+   * \brief Obtains collision candidates for the AABB associated with the
+   * specified ID.
+   *
+   * \details In order to avoid unnecessary dynamic allocations, this function
+   * returns the resulting collision candidates through an output iterator. This
+   * means that it is possible to write collision candidates to both a stack
+   * buffer and something like a `std::vector`.
+   *
+   * \details The output iterator can for instance be obtained using
+   * `std::back_inserter`, if you're writing to a standard container.
+   *
+   * \tparam OutIterator the type of the output iterator.
+   *
+   * \param key the ID associated with the AABB to obtain collision candidates
+   * for.
+   * \param[out] iterator the output iterator used to write the collision
+   * candidate IDs.
+   *
+   * \since 0.1.0
+   */
   template <typename OutIterator>
   void query_collisions(const key_type& key, OutIterator iterator) const
   {
@@ -327,16 +400,44 @@ class aabb_tree final
     }
   }
 
+  /**
+   * \brief Returns the AABB associated with the specified ID.
+   *
+   * \param key the ID associated with the desired AABB.
+   *
+   * \return the AABB associated with the specified ID.
+   *
+   * \throws if there is no AABB associated with the supplied ID.
+   *
+   * \since 0.1.0
+   */
   [[nodiscard]] auto get_aabb(const key_type& key) const -> const aabb_type&
   {
     return m_nodes.at(m_indexMap.at(key)).box;
   }
 
+  /**
+   * \brief Returns the amount of AABBs stored in the tree.
+   *
+   * \note The returned value is not necessarily the amount of _nodes_ in the
+   * tree.
+   *
+   * \return the current amount of AABBs stored in the tree.
+   *
+   * \since 0.1.0
+   */
   [[nodiscard]] auto size() const noexcept -> size_type
   {
     return m_indexMap.size();
   }
 
+  /**
+   * \brief Indicates whether or not the tree is empty.
+   *
+   * \return `true` if there are no AABBs stored in the tree; `false` otherwise.
+   *
+   * \since 0.1.0
+   */
   [[nodiscard]] auto is_empty() const noexcept -> bool
   {
     return m_indexMap.empty();

@@ -177,21 +177,19 @@ struct aabb_node final
   opt_int left;
   opt_int right;
   opt_int next;
-};
 
-template <typename T, typename U>
-[[nodiscard]] constexpr auto is_leaf(const aabb_node<T, U>& node) noexcept
-    -> bool
-{
-  return !node.left;
-}
+  [[nodiscard]] constexpr auto is_leaf() const noexcept -> bool
+  {
+    return !left;
+  }
+};
 
 template <typename T, typename U>
 [[nodiscard]] constexpr auto get_left_cost(const aabb_node<T, U>& left,
                                            const aabb_node<T, U>& leaf,
                                            float minimumCost) -> float
 {
-  if (is_leaf(left)) {
+  if (left.is_leaf()) {
     return area_of(combine(leaf.box, left.box)) + minimumCost;
   } else {
     const auto newLeftAabb = combine(leaf.box, left.box);
@@ -204,7 +202,7 @@ template <typename T, typename U>
                                             const aabb_node<T, U>& leaf,
                                             float minimumCost) -> float
 {
-  if (is_leaf(right)) {
+  if (right.is_leaf()) {
     return area_of(combine(leaf.box, right.box)) + minimumCost;
   } else {
     const auto newRightAabb = combine(leaf.box, right.box);
@@ -389,7 +387,7 @@ class aabb_tree final
 
       const auto& node = m_nodes.at(*nodeIndex);
       if (overlaps(node.box, box)) {
-        if (is_leaf(node) && node.id != key) {
+        if (node.is_leaf() && node.id != key) {
           *iterator = node.id;
           ++iterator;
         } else {
@@ -517,7 +515,7 @@ class aabb_tree final
       const node_type& leafNode) const -> index_type
   {
     auto treeNodeIndex = m_rootIndex.value();
-    while (!is_leaf(m_nodes.at(treeNodeIndex))) {
+    while (!m_nodes.at(treeNodeIndex).is_leaf()) {
       // because of the test in the while loop above we know we are never a leaf
       // inside it
       const auto& treeNode = m_nodes.at(treeNodeIndex);

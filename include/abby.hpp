@@ -23,10 +23,15 @@
  *
  */
 
-#include <cassert>   // assert
-#include <map>       // map
-#include <optional>  // optional
-#include <vector>    // vector
+#include <array>            // array
+#include <cassert>          // assert
+#include <cstddef>          // byte
+#include <deque>            // deque
+#include <map>              // map
+#include <memory_resource>  // monotonic_buffer_resource
+#include <optional>         // optional
+#include <stack>            // stack
+#include <vector>           // vector
 
 #ifndef ABBY_HEADER_GUARD
 #define ABBY_HEADER_GUARD
@@ -73,6 +78,9 @@ struct aabb_node final
 template <typename Key, typename T = float>
 class aabb_tree final
 {
+  template <typename T>
+  using pmr_stack = std::stack<T, std::pmr::deque<T>>;
+
  public:
   using key_type = Key;
   using size_type = std::size_t;
@@ -113,16 +121,43 @@ class aabb_tree final
     newBox.min = position;
     newBox.max = position + (previous.max - previous.min);
 
-//    const auto width = newBox.max.x() - newBox.min.x();
-//    const auto height = newBox.max.y() - newBox.min.y();
-//    newBox.area = width * height;
+    //    const auto width = newBox.max.x() - newBox.min.x();
+    //    const auto height = newBox.max.y() - newBox.min.y();
+    //    newBox.area = width * height;
 
     update(key, newBox);
   }
 
   template <typename OutputIterator>
   void query_collisions(const key_type& key, OutputIterator iterator) const
-  {}
+  {
+    std::array<std::byte, sizeof(opt_int) * 32> buffer;  // NOLINT
+    std::pmr::monotonic_buffer_resource resource{buffer.data(), sizeof buffer};
+    pmr_stack<std::optional<int>> stack{&resource};
+
+    const auto& box = get_aabb(key);
+
+    stack.push(m_rootIndex);
+    while (!stack.empty()) {
+      const auto nodeIndex = stack.top();
+      stack.pop();
+
+      if (!nodeIndex.has_value()) {
+        continue;
+      }
+
+      const auto& node = m_nodes.at(*nodeIndex);
+      if (overlaps(node.box, box)) {
+        if (is_leaf(node) && node.entity != key) {
+          *iterator = node.entity;
+          ++iterator;
+        } else {
+          stack.push(node.left);
+          stack.push(node.right);
+        }
+      }
+    }
+  }
 
   [[nodiscard]] auto get_aabb(const key_type& key) const -> const aabb_type&
   {
@@ -292,8 +327,8 @@ class aabb_tree final
       // the old parent was the root and so this is now the root
       m_rootIndex = newParentIndex;
     } else {
-      // the old parent was not the root and so we need to patch the left or right
-      // index to point to the new node
+      // the old parent was not the root and so we need to patch the left or
+      // right index to point to the new node
       auto& oldParent = m_nodes.at(oldParentIndex.value());
       if (oldParent.left == leafSiblingIndex) {
         oldParent.left = newParentIndex;
@@ -308,7 +343,8 @@ class aabb_tree final
 
   void remove_leaf(index_type leafIndex)
   {
-    // if the leaf is the root then we can just clear the root pointer and return
+    // if the leaf is the root then we can just clear the root pointer and
+    // return
     if (leafIndex == m_rootIndex) {
       m_rootIndex = std::nullopt;
       return;
@@ -327,8 +363,9 @@ class aabb_tree final
     auto& siblingNode = m_nodes.at(*siblingNodeIndex);
 
     if (grandParentNodeIndex.has_value()) {
-      // if we have a grand parent (i.e. the parent is not the root) then destroy
-      // the parent and connect the sibling to the grandparent in its place
+      // if we have a grand parent (i.e. the parent is not the root) then
+      // destroy the parent and connect the sibling to the grandparent in its
+      // place
       auto& grandParentNode = m_nodes.at(*grandParentNodeIndex);
       if (grandParentNode.left == parentNodeIndex) {
         grandParentNode.left = siblingNodeIndex;
@@ -339,8 +376,8 @@ class aabb_tree final
       deallocate_node(parentNodeIndex);
       fix_upwards_tree(grandParentNodeIndex);
     } else {
-      // if we have no grandparent then the parent is the root and so our sibling
-      // becomes the root and has it's parent removed
+      // if we have no grandparent then the parent is the root and so our
+      // sibling becomes the root and has it's parent removed
       m_rootIndex = siblingNodeIndex;
       siblingNode.parent = std::nullopt;
       deallocate_node(parentNodeIndex);

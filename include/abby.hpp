@@ -21,6 +21,10 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
+ * This code was originally based on the AABB tree implementation in the Simple
+ * Voxel Engine project, which can be found here:
+ * https://github.com/JamesRandall/SimpleVoxelEngine. The Simple Voxel Engine
+ * project also uses the MIT license.
  */
 
 #include <algorithm>        // min, max
@@ -143,20 +147,16 @@ template <typename T>
 [[nodiscard]] constexpr auto contains(const aabb<T>& source,
                                       const aabb<T>& other) noexcept -> bool
 {
-  return (other.min.x >= source.min.x) &&
-         (other.max.x <= source.max.x) &&
-         (other.min.y >= source.min.y) &&
-         (other.max.y <= source.max.y);
+  return (other.min.x >= source.min.x) && (other.max.x <= source.max.x) &&
+         (other.min.y >= source.min.y) && (other.max.y <= source.max.y);
 }
 
 template <typename T>
 [[nodiscard]] constexpr auto overlaps(const aabb<T>& fst,
                                       const aabb<T>& snd) noexcept -> bool
 {
-  return (fst.max.x > snd.min.x) &&
-         (fst.min.x < snd.max.x) &&
-         (fst.max.y > snd.min.y) &&
-         (fst.min.y < snd.max.y);
+  return (fst.max.x > snd.min.x) && (fst.min.x < snd.max.x) &&
+         (fst.max.y > snd.min.y) && (fst.min.y < snd.max.y);
 }
 
 /**

@@ -280,7 +280,47 @@ class aabb_tree final
   }
 
   void remove_leaf(index_type leafIndex)
-  {}
+  {
+    // if the leaf is the root then we can just clear the root pointer and return
+    if (leafIndex == m_rootIndex) {
+      m_rootIndex = std::nullopt;
+      return;
+    }
+
+    auto& leafNode = m_nodes.at(leafIndex);
+
+    const auto parentNodeIndex = leafNode.parent.value();
+    const auto& parentNode = m_nodes.at(parentNodeIndex);
+
+    const auto grandParentNodeIndex = parentNode.parent;
+
+    const auto siblingNodeIndex =
+        parentNode.left == leafIndex ? parentNode.right : parentNode.left;
+    assert(siblingNodeIndex.has_value());  // we must have a sibling
+    auto& siblingNode = m_nodes.at(*siblingNodeIndex);
+
+    if (grandParentNodeIndex.has_value()) {
+      // if we have a grand parent (i.e. the parent is not the root) then destroy
+      // the parent and connect the sibling to the grandparent in its place
+      auto& grandParentNode = m_nodes.at(*grandParentNodeIndex);
+      if (grandParentNode.left == parentNodeIndex) {
+        grandParentNode.left = siblingNodeIndex;
+      } else {
+        grandParentNode.right = siblingNodeIndex;
+      }
+      siblingNode.parent = grandParentNodeIndex;
+      deallocate_node(parentNodeIndex);
+      fix_upwards_tree(grandParentNodeIndex);
+    } else {
+      // if we have no grandparent then the parent is the root and so our sibling
+      // becomes the root and has it's parent removed
+      m_rootIndex = siblingNodeIndex;
+      siblingNode.parent = std::nullopt;
+      deallocate_node(parentNodeIndex);
+    }
+
+    leafNode.parent = std::nullopt;
+  }
 
   void update_leaf(index_type leafIndex, const aabb_type& box)
   {}

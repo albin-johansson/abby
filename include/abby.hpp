@@ -165,7 +165,22 @@ class aabb_tree final
   }
 
   void fix_upwards_tree(opt_index nodeIndex)
-  {}
+  {
+    while (nodeIndex) {
+      auto& node = m_nodes.at(nodeIndex.value());
+
+      // every node should be a parent
+      assert(node.left);
+      assert(node.right);
+
+      // fix height and area
+      const auto& left = m_nodes.at(node.left.value());
+      const auto& right = m_nodes.at(node.right.value());
+      node.box = merge(left.box, right.box);
+
+      nodeIndex = node.parent;
+    }
+  }
 
   [[nodiscard]] auto find_best_insertion_position(const node_type& leafNode)
       -> index_type

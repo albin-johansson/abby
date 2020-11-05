@@ -45,11 +45,25 @@ namespace abby {
 
 using opt_int = std::optional<int>;
 
+/**
+ * \struct vec2
+ *
+ * \brief A very simple representation of a 2D vector.
+ *
+ * \tparam T the representation type used.
+ *
+ * \since 0.1.0
+ *
+ * \see fvec2
+ * \see dvec2
+ *
+ * \headerfile abby.hpp
+ */
 template <typename T>
 struct vec2 final
 {
-  T x{};
-  T y{};
+  T x{};  ///< The x-axis component.
+  T y{};  ///< The y-axis component.
 };
 
 using fvec2 = vec2<float>;
@@ -155,6 +169,21 @@ template <typename T>
   return !(lhs == rhs);
 }
 
+/**
+ * \brief Creates and returns an AABB with the specified position and size.
+ *
+ * \details This is a convenience function for creating an AABB by specifying
+ * the position and size, instead of the top-left and bottom-right corners.
+ *
+ * \tparam T the representation type used.
+ *
+ * \param position the position of the AABB (X and Y).
+ * \param size the size of the AABB (width and height).
+ *
+ * \return an AABB at the specified position with the the specified size.
+ *
+ * \since 0.1.0
+ */
 template <typename T>
 [[nodiscard]] constexpr auto make_aabb(const vec2<T>& position,
                                        const vec2<T>& size) -> aabb<T>

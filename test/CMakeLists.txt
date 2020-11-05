@@ -4,7 +4,8 @@ project(abby-test)
 set(TEST_SOURCES
         unittest/test_main.cpp
         unittest/aabb_tree_test.cpp
-        unittest/vec2_test.cpp)
+        unittest/vec2_test.cpp
+        unittest/aabb_test.cpp)
 
 add_executable(${ABBY_TEST_TARGET} ${TEST_SOURCES})
 

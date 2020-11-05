@@ -53,29 +53,29 @@ using fvec2 = vec2<float>;
 using dvec2 = vec2<double>;
 
 template <typename T>
-[[nodiscard]] auto operator+(const vec2<T>& lhs, const vec2<T>& rhs) noexcept
-    -> vec2<T>
+[[nodiscard]] constexpr auto operator+(const vec2<T>& lhs,
+                                       const vec2<T>& rhs) noexcept -> vec2<T>
 {
   return {lhs.x + rhs.x, lhs.y + rhs.y};
 }
 
 template <typename T>
-[[nodiscard]] auto operator-(const vec2<T>& lhs, const vec2<T>& rhs) noexcept
-    -> vec2<T>
+[[nodiscard]] constexpr auto operator-(const vec2<T>& lhs,
+                                       const vec2<T>& rhs) noexcept -> vec2<T>
 {
   return {lhs.x - rhs.x, lhs.y - rhs.y};
 }
 
 template <typename T>
-[[nodiscard]] auto operator==(const vec2<T>& lhs, const vec2<T>& rhs) noexcept
-    -> bool
+[[nodiscard]] constexpr auto operator==(const vec2<T>& lhs,
+                                        const vec2<T>& rhs) noexcept -> bool
 {
   return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
 template <typename T>
-[[nodiscard]] auto operator!=(const vec2<T>& lhs, const vec2<T>& rhs) noexcept
-    -> bool
+[[nodiscard]] constexpr auto operator!=(const vec2<T>& lhs,
+                                        const vec2<T>& rhs) noexcept -> bool
 {
   return !(lhs == rhs);
 }
@@ -87,38 +87,37 @@ struct aabb final
   vec2<T> max;
 };
 
+using faabb = aabb<float>;
+using daabb = aabb<double>;
+
 template <typename T>
-[[nodiscard]] auto operator==(const aabb<T>& lhs, const aabb<T>& rhs) noexcept
-    -> bool
+[[nodiscard]] constexpr auto operator==(const aabb<T>& lhs,
+                                        const aabb<T>& rhs) noexcept -> bool
 {
   return lhs.min == rhs.min && lhs.max == rhs.max;
 }
 
 template <typename T>
-[[nodiscard]] auto operator!=(const aabb<T>& lhs, const aabb<T>& rhs) noexcept
-    -> bool
+[[nodiscard]] constexpr auto operator!=(const aabb<T>& lhs,
+                                        const aabb<T>& rhs) noexcept -> bool
 {
   return !(lhs == rhs);
 }
 
 template <typename T>
-[[nodiscard]] auto make_aabb(const vec2<T>& position, const vec2<T>& size)
-    -> aabb<T>
+[[nodiscard]] constexpr auto make_aabb(const vec2<T>& position,
+                                       const vec2<T>& size) -> aabb<T>
 {
   aabb box;
 
   box.min = position;
   box.max = box.min + size;
 
-  //  const auto width = box.max.x() - box.min.x();
-  //  const auto height = box.max.y() - box.min.y();
-  //  box.area = width * height;
-
   return box;
 }
 
 template <typename T>
-[[nodiscard]] auto area_of(const aabb<T>& aabb) noexcept -> T
+[[nodiscard]] constexpr auto area_of(const aabb<T>& aabb) noexcept -> T
 {
   const auto width = aabb.max.x - aabb.min.x;
   const auto height = aabb.max.y - aabb.min.y;
@@ -126,8 +125,8 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto combine(const aabb<T>& fst, const aabb<T>& snd) noexcept
-    -> aabb<T>
+[[nodiscard]] constexpr auto combine(const aabb<T>& fst,
+                                     const aabb<T>& snd) noexcept -> aabb<T>
 {
   aabb result;
 
@@ -141,19 +140,23 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto contains(const aabb<T>& source,
-                            const aabb<T>& other) noexcept -> bool
+[[nodiscard]] constexpr auto contains(const aabb<T>& source,
+                                      const aabb<T>& other) noexcept -> bool
 {
-  return other.min.x >= source.min.x && other.max.x <= source.max.x &&
-         other.min.y >= source.min.y && other.max.y <= source.max.y;
+  return (other.min.x >= source.min.x) &&
+         (other.max.x <= source.max.x) &&
+         (other.min.y >= source.min.y) &&
+         (other.max.y <= source.max.y);
 }
 
 template <typename T>
-[[nodiscard]] auto overlaps(const aabb<T>& fst, const aabb<T>& snd) noexcept
-    -> bool
+[[nodiscard]] constexpr auto overlaps(const aabb<T>& fst,
+                                      const aabb<T>& snd) noexcept -> bool
 {
-  return (fst.max.x > snd.min.x) && (fst.min.x < snd.max.x) &&
-         (fst.max.y > snd.min.y) && (fst.min.y < snd.max.y);
+  return (fst.max.x > snd.min.x) &&
+         (fst.min.x < snd.max.x) &&
+         (fst.max.y > snd.min.y) &&
+         (fst.min.y < snd.max.y);
 }
 
 /**
@@ -178,15 +181,16 @@ struct aabb_node final
 };
 
 template <typename T, typename U>
-[[nodiscard]] inline auto is_leaf(const aabb_node<T, U>& node) noexcept -> bool
+[[nodiscard]] constexpr auto is_leaf(const aabb_node<T, U>& node) noexcept
+    -> bool
 {
   return !node.left;
 }
 
 template <typename T, typename U>
-[[nodiscard]] auto get_left_cost(const aabb_node<T, U>& left,
-                                 const aabb_node<T, U>& leaf,
-                                 float minimumCost) -> float
+[[nodiscard]] constexpr auto get_left_cost(const aabb_node<T, U>& left,
+                                           const aabb_node<T, U>& leaf,
+                                           float minimumCost) -> float
 {
   if (is_leaf(left)) {
     return area_of(combine(leaf.box, left.box)) + minimumCost;
@@ -197,9 +201,9 @@ template <typename T, typename U>
 }
 
 template <typename T, typename U>
-[[nodiscard]] auto get_right_cost(const aabb_node<T, U>& right,
-                                  const aabb_node<T, U>& leaf,
-                                  float minimumCost) -> float
+[[nodiscard]] constexpr auto get_right_cost(const aabb_node<T, U>& right,
+                                            const aabb_node<T, U>& leaf,
+                                            float minimumCost) -> float
 {
   if (is_leaf(right)) {
     return area_of(combine(leaf.box, right.box)) + minimumCost;

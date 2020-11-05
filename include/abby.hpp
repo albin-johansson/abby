@@ -166,6 +166,8 @@ template <typename T>
  * \details Contains an AABB and the entity associated with the AABB, along
  * with tree information.
  *
+ * \since 0.1.0
+ *
  * \headerfile abby.hpp
  */
 template <typename T, typename U = float>

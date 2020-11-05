@@ -226,13 +226,63 @@ class aabb_tree final
     return treeNodeIndex;
   }
 
-  void insert_leaf(index_type leaf)
+  void insert_leaf(index_type leafIndex)
+  {
+    // make sure we're inserting a new leaf
+    assert(!m_nodes.at(leafIndex).parent);
+    assert(!m_nodes.at(leafIndex).left);
+    assert(!m_nodes.at(leafIndex).right);
+
+    // if the tree is empty then we make the root the leaf
+    if (!m_rootIndex) {
+      m_rootIndex = leafIndex;
+      return;
+    }
+
+    // search for the best place to put the new leaf in the tree
+    // we use surface area and depth as search heuristics
+    auto& leafNode = m_nodes.at(leafIndex);
+    const auto foundIndex = find_best_insertion_position(leafNode);
+
+    // the leafs sibling is going to be the node we found above and we are going
+    // to create a new parent node and attach the leaf and this item
+    const auto leafSiblingIndex = foundIndex;
+    auto& leafSibling = m_nodes.at(leafSiblingIndex);
+
+    const auto oldParentIndex = leafSibling.parent;
+    const auto newParentIndex = allocate_node();
+
+    auto& newParent = m_nodes.at(newParentIndex);
+    newParent.parent = oldParentIndex;
+    // the new parents aabb is the leaf aabb combined with it's siblings aabb
+    newParent.box = merge(leafNode.box, leafSibling.box);
+    newParent.left = leafSiblingIndex;
+    newParent.right = leafIndex;
+    leafNode.parent = newParentIndex;
+    leafSibling.parent = newParentIndex;
+
+    if (!oldParentIndex.has_value()) {
+      // the old parent was the root and so this is now the root
+      m_rootIndex = newParentIndex;
+    } else {
+      // the old parent was not the root and so we need to patch the left or right
+      // index to point to the new node
+      auto& oldParent = m_nodes.at(oldParentIndex.value());
+      if (oldParent.left == leafSiblingIndex) {
+        oldParent.left = newParentIndex;
+      } else {
+        oldParent.right = newParentIndex;
+      }
+    }
+
+    // finally we need to walk back up the tree fixing heights and areas
+    fix_upwards_tree(leafNode.parent.value());
+  }
+
+  void remove_leaf(index_type leafIndex)
   {}
 
-  void remove_leaf(index_type leaf)
-  {}
-
-  void update_leaf(index_type leaf, const aabb_type& box)
+  void update_leaf(index_type leafIndex, const aabb_type& box)
   {}
 };
 

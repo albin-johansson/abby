@@ -28,6 +28,7 @@
 #include <cassert>          // assert
 #include <cstddef>          // byte
 #include <deque>            // deque
+#include <iterator>         // back_inserter
 #include <map>              // map
 #include <memory_resource>  // monotonic_buffer_resource
 #include <optional>         // optional
@@ -48,12 +49,73 @@ struct vec2 final
   T y{};
 };
 
+using fvec2 = vec2<float>;
+using dvec2 = vec2<double>;
+
+template <typename T>
+[[nodiscard]] auto operator+(const vec2<T>& lhs, const vec2<T>& rhs) noexcept
+    -> vec2<T>
+{
+  return {lhs.x + rhs.x, lhs.y + rhs.y};
+}
+
+template <typename T>
+[[nodiscard]] auto operator-(const vec2<T>& lhs, const vec2<T>& rhs) noexcept
+    -> vec2<T>
+{
+  return {lhs.x - rhs.x, lhs.y - rhs.y};
+}
+
+template <typename T>
+[[nodiscard]] auto operator==(const vec2<T>& lhs, const vec2<T>& rhs) noexcept
+    -> bool
+{
+  return lhs.x == rhs.x && lhs.y == rhs.y;
+}
+
+template <typename T>
+[[nodiscard]] auto operator!=(const vec2<T>& lhs, const vec2<T>& rhs) noexcept
+    -> bool
+{
+  return !(lhs == rhs);
+}
+
 template <typename T = float>
 struct aabb final
 {
   vec2<T> min;
   vec2<T> max;
 };
+
+template <typename T>
+[[nodiscard]] auto operator==(const aabb<T>& lhs, const aabb<T>& rhs) noexcept
+    -> bool
+{
+  return lhs.min == rhs.min && lhs.max == rhs.max;
+}
+
+template <typename T>
+[[nodiscard]] auto operator!=(const aabb<T>& lhs, const aabb<T>& rhs) noexcept
+    -> bool
+{
+  return !(lhs == rhs);
+}
+
+template <typename T>
+[[nodiscard]] auto make_aabb(const vec2<T>& position, const vec2<T>& size)
+    -> aabb<T>
+{
+  aabb box;
+
+  box.min = position;
+  box.max = box.min + size;
+
+  //  const auto width = box.max.x() - box.min.x();
+  //  const auto height = box.max.y() - box.min.y();
+  //  box.area = width * height;
+
+  return box;
+}
 
 template <typename T>
 [[nodiscard]] auto area_of(const aabb<T>& aabb) noexcept -> T
@@ -82,16 +144,16 @@ template <typename T>
 [[nodiscard]] auto contains(const aabb<T>& source,
                             const aabb<T>& other) noexcept -> bool
 {
-  return other.min.x() >= source.min.x() && other.max.x() <= source.max.x() &&
-         other.min.y() >= source.min.y() && other.max.y() <= source.max.y();
+  return other.min.x >= source.min.x && other.max.x <= source.max.x &&
+         other.min.y >= source.min.y && other.max.y <= source.max.y;
 }
 
 template <typename T>
 [[nodiscard]] auto overlaps(const aabb<T>& fst, const aabb<T>& snd) noexcept
     -> bool
 {
-  return (fst.max.x() > snd.min.x()) && (fst.min.x() < snd.max.x()) &&
-         (fst.max.y() > snd.min.y()) && (fst.min.y() < snd.max.y());
+  return (fst.max.x > snd.min.x) && (fst.min.x < snd.max.x) &&
+         (fst.max.y > snd.min.y) && (fst.min.y < snd.max.y);
 }
 
 /**
@@ -177,6 +239,8 @@ class aabb_tree final
 
   void insert(const key_type& key, const aabb_type& box)
   {
+    assert(!m_indexMap.count(key));
+
     const auto index = allocate_node();
     auto& node = m_nodes.at(index);
     node.box = box;
@@ -188,19 +252,27 @@ class aabb_tree final
 
   void remove(const key_type& key)
   {
-    const auto index = m_indexMap.at(key);
-    remove_leaf(index);
-    deallocate_node(index);
-    m_indexMap.erase(key);
+    if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
+      const auto index = it->second;
+      remove_leaf(index);
+      deallocate_node(index);
+      m_indexMap.erase(key);
+    }
   }
 
   void update(const key_type& key, const aabb_type& box)
   {
-    update_leaf(m_indexMap.at(key), box);
+    if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
+      update_leaf(it->second, box);
+    }
   }
 
   void set_position(const key_type& key, const vector_type& position)
   {
+    if (!m_indexMap.count(key)) {
+      return;
+    }
+
     const auto previous = get_aabb(key);
 
     aabb newBox;
@@ -214,10 +286,16 @@ class aabb_tree final
     update(key, newBox);
   }
 
-  template <typename OutputIterator>
-  void query_collisions(const key_type& key, OutputIterator iterator) const
+  void query_collisions(const key_type&, nullptr_t) const = delete;
+
+  template <typename OutIterator>
+  void query_collisions(const key_type& key, OutIterator iterator) const
   {
-    std::array<std::byte, sizeof(opt_int) * 32> buffer;  // NOLINT
+    if (!m_indexMap.count(key)) {
+      return;
+    }
+
+    std::array<std::byte, sizeof(opt_int) * 64> buffer;  // NOLINT
     std::pmr::monotonic_buffer_resource resource{buffer.data(), sizeof buffer};
     pmr_stack<std::optional<int>> stack{&resource};
 
@@ -234,8 +312,8 @@ class aabb_tree final
 
       const auto& node = m_nodes.at(*nodeIndex);
       if (overlaps(node.box, box)) {
-        if (is_leaf(node) && node.entity != key) {
-          *iterator = node.entity;
+        if (is_leaf(node) && node.id != key) {
+          *iterator = node.id;
           ++iterator;
         } else {
           stack.push(node.left);

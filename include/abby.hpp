@@ -23,6 +23,7 @@
  *
  */
 
+#include <algorithm>        // min, max
 #include <array>            // array
 #include <cassert>          // assert
 #include <cstddef>          // byte
@@ -54,6 +55,45 @@ struct aabb final
   vec2<T> max;
 };
 
+template <typename T>
+[[nodiscard]] auto area_of(const aabb<T>& aabb) noexcept -> T
+{
+  const auto width = aabb.max.x - aabb.min.x;
+  const auto height = aabb.max.y - aabb.min.y;
+  return width * height;
+}
+
+template <typename T>
+[[nodiscard]] auto combine(const aabb<T>& fst, const aabb<T>& snd) noexcept
+    -> aabb<T>
+{
+  aabb result;
+
+  result.min.x = std::min(fst.min.x, snd.min.x);
+  result.min.y = std::min(fst.min.y, snd.min.y);
+
+  result.max.x = std::max(fst.max.x, snd.max.x);
+  result.max.y = std::max(fst.max.y, snd.max.y);
+
+  return result;
+}
+
+template <typename T>
+[[nodiscard]] auto contains(const aabb<T>& source,
+                            const aabb<T>& other) noexcept -> bool
+{
+  return other.min.x() >= source.min.x() && other.max.x() <= source.max.x() &&
+         other.min.y() >= source.min.y() && other.max.y() <= source.max.y();
+}
+
+template <typename T>
+[[nodiscard]] auto overlaps(const aabb<T>& fst, const aabb<T>& snd) noexcept
+    -> bool
+{
+  return (fst.max.x() > snd.min.x()) && (fst.min.x() < snd.max.x()) &&
+         (fst.max.y() > snd.min.y()) && (fst.min.y() < snd.max.y());
+}
+
 /**
  * \struct aabb_node
  *
@@ -75,11 +115,43 @@ struct aabb_node final
   opt_int next;
 };
 
+template <typename T, typename U>
+[[nodiscard]] inline auto is_leaf(const aabb_node<T, U>& node) noexcept -> bool
+{
+  return !node.left;
+}
+
+template <typename T, typename U>
+[[nodiscard]] auto get_left_cost(const aabb_node<T, U>& left,
+                                 const aabb_node<T, U>& leaf,
+                                 float minimumCost) -> float
+{
+  if (is_leaf(left)) {
+    return area_of(combine(leaf.box, left.box)) + minimumCost;
+  } else {
+    const auto newLeftAabb = combine(leaf.box, left.box);
+    return (area_of(newLeftAabb) - area_of(left.box)) + minimumCost;
+  }
+}
+
+template <typename T, typename U>
+[[nodiscard]] auto get_right_cost(const aabb_node<T, U>& right,
+                                  const aabb_node<T, U>& leaf,
+                                  float minimumCost) -> float
+{
+  if (is_leaf(right)) {
+    return area_of(combine(leaf.box, right.box)) + minimumCost;
+  } else {
+    const auto newRightAabb = combine(leaf.box, right.box);
+    return (area_of(newRightAabb) - area_of(right.box)) + minimumCost;
+  }
+}
+
 template <typename Key, typename T = float>
 class aabb_tree final
 {
-  template <typename T>
-  using pmr_stack = std::stack<T, std::pmr::deque<T>>;
+  template <typename U>
+  using pmr_stack = std::stack<U, std::pmr::deque<U>>;
 
  public:
   using key_type = Key;
@@ -89,12 +161,26 @@ class aabb_tree final
   using node_type = aabb_node<key_type, T>;
   using index_type = int;
 
+  aabb_tree()
+  {
+    m_nodes.reserve(m_nodeCapacity);
+    m_allocatedNodes = m_nodeCapacity;
+
+    const auto size = static_cast<int>(m_nodeCapacity);
+    for (int index = 0; index < size; ++index) {
+      auto& node = m_nodes.emplace_back();
+      node.next = index + 1;
+    }
+
+    m_nodes.at(size - 1).next.reset();
+  }
+
   void insert(const key_type& key, const aabb_type& box)
   {
     const auto index = allocate_node();
     auto& node = m_nodes.at(index);
     node.box = box;
-    node.key = key;
+    node.id = key;
 
     insert_leaf(index);
     m_indexMap.emplace(key, index);
@@ -178,7 +264,7 @@ class aabb_tree final
   using opt_index = std::optional<index_type>;
 
   std::map<key_type, index_type> m_indexMap;
-  std::vector<aabb_type> m_nodes;
+  std::vector<aabb_node<key_type, T>> m_nodes;
 
   opt_index m_rootIndex{};
   opt_index m_nextFreeNodeIndex{};
@@ -200,7 +286,7 @@ class aabb_tree final
     }
 
     m_nodes.at(m_nodeCapacity - 1).next.reset();
-    m_nextFreeNodeIndex = m_allocatedNodes;
+    m_nextFreeNodeIndex = static_cast<index_type>(m_allocatedNodes);
   }
 
   [[nodiscard]] auto allocate_node() -> index_type
@@ -238,7 +324,7 @@ class aabb_tree final
       // fix height and area
       const auto& left = m_nodes.at(node.left.value());
       const auto& right = m_nodes.at(node.right.value());
-      node.box = merge(left.box, right.box);
+      node.box = combine(left.box, right.box);
 
       nodeIndex = node.parent;
     }
@@ -257,11 +343,11 @@ class aabb_tree final
       const auto& leftNode = m_nodes.at(leftNodeIndex);
       const auto& rightNode = m_nodes.at(rightNodeIndex);
 
-      const auto combined = merge(treeNode.box, leafNode.box);
+      const auto combined = combine(treeNode.box, leafNode.box);
 
-      const auto newParentNodeCost = 2.0f * combined.area;
+      const auto newParentNodeCost = 2.0f * area_of(combined);
       const auto minimumPushDownCost =
-          2.0f * (combined.area - treeNode.box.area);
+          2.0f * (area_of(combined) - area_of(treeNode.box));
 
       // use the costs to figure out whether to create a new parent here or
       // descend
@@ -317,7 +403,7 @@ class aabb_tree final
     auto& newParent = m_nodes.at(newParentIndex);
     newParent.parent = oldParentIndex;
     // the new parents aabb is the leaf aabb combined with it's siblings aabb
-    newParent.box = merge(leafNode.box, leafSibling.box);
+    newParent.box = combine(leafNode.box, leafSibling.box);
     newParent.left = leafSiblingIndex;
     newParent.right = leafIndex;
     leafNode.parent = newParentIndex;

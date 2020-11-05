@@ -195,6 +195,8 @@ struct aabb_node final
   }
 };
 
+namespace detail {
+
 template <typename T, typename U>
 [[nodiscard]] constexpr auto get_left_cost(const aabb_node<T, U>& left,
                                            const aabb_node<T, U>& leaf,
@@ -220,6 +222,8 @@ template <typename T, typename U>
     return (area_of(newRightAabb) - area_of(right.box)) + minimumCost;
   }
 }
+
+}  // namespace detail
 
 /**
  * \class aabb_tree
@@ -544,9 +548,9 @@ class aabb_tree final
       // use the costs to figure out whether to create a new parent here or
       // descend
       const auto costLeft =
-          get_left_cost(leftNode, leafNode, minimumPushDownCost);
+          detail::get_left_cost(leftNode, leafNode, minimumPushDownCost);
       const auto costRight =
-          get_right_cost(rightNode, leafNode, minimumPushDownCost);
+          detail::get_right_cost(rightNode, leafNode, minimumPushDownCost);
 
       // if the cost of creating a new parent node here is less than descending
       // in either direction then we know we need to create a new parent node

@@ -82,16 +82,43 @@ class aabb_tree final
   using index_type = int;
 
   void insert(const key_type& key, const aabb_type& box)
-  {}
+  {
+    const auto index = allocate_node();
+    auto& node = m_nodes.at(index);
+    node.box = box;
+    node.key = key;
+
+    insert_leaf(index);
+    m_indexMap.emplace(key, index);
+  }
 
   void remove(const key_type& key)
-  {}
+  {
+    const auto index = m_indexMap.at(key);
+    remove_leaf(index);
+    deallocate_node(index);
+    m_indexMap.erase(key);
+  }
 
   void update(const key_type& key, const aabb_type& box)
-  {}
+  {
+    update_leaf(m_indexMap.at(key), box);
+  }
 
-  void move(const key_type& key, const vector_type& offset)
-  {}
+  void set_position(const key_type& key, const vector_type& position)
+  {
+    const auto previous = get_aabb(key);
+
+    aabb newBox;
+    newBox.min = position;
+    newBox.max = position + (previous.max - previous.min);
+
+//    const auto width = newBox.max.x() - newBox.min.x();
+//    const auto height = newBox.max.y() - newBox.min.y();
+//    newBox.area = width * height;
+
+    update(key, newBox);
+  }
 
   template <typename OutputIterator>
   void query_collisions(const key_type& key, OutputIterator iterator) const
@@ -323,7 +350,18 @@ class aabb_tree final
   }
 
   void update_leaf(index_type leafIndex, const aabb_type& box)
-  {}
+  {
+    auto& node = m_nodes.at(leafIndex);
+
+    // if the node contains the new aabb then we just leave things
+    if (contains(node.box, box)) {
+      return;
+    }
+
+    remove_leaf(leafIndex);
+    node.box = box;
+    insert_leaf(leafIndex);
+  }
 };
 
 }  // namespace abby

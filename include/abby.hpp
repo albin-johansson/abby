@@ -310,7 +310,7 @@ class aabb_tree final
       const auto nodeIndex = stack.top();
       stack.pop();
 
-      if (!nodeIndex.has_value()) {
+      if (!nodeIndex) {
         continue;
       }
 
@@ -374,7 +374,7 @@ class aabb_tree final
   [[nodiscard]] auto allocate_node() -> index_type
   {
     // if we have no free tree nodes then grow the pool
-    if (!m_nextFreeNodeIndex.has_value()) {
+    if (!m_nextFreeNodeIndex) {
       grow_pool();
     }
 
@@ -491,7 +491,7 @@ class aabb_tree final
     leafNode.parent = newParentIndex;
     leafSibling.parent = newParentIndex;
 
-    if (!oldParentIndex.has_value()) {
+    if (!oldParentIndex) {
       // the old parent was the root and so this is now the root
       m_rootIndex = newParentIndex;
     } else {

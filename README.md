@@ -1,3 +1,3 @@
 # abby
 
-An adaptation of the AABB.cc library
+A header-only implementation of an AABB tree.

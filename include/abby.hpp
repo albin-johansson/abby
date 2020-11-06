@@ -515,7 +515,7 @@ class aabb_tree final
     replace(key, newBox);
   }
 
-  void query_collisions(const key_type&, nullptr_t) const = delete;
+  void query_collisions(const key_type&, std::nullptr_t) const = delete;
 
   /**
    * \brief Obtains collision candidates for the AABB associated with the

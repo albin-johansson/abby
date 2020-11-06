@@ -69,6 +69,19 @@ struct vec2 final
 using fvec2 = vec2<float>;
 using dvec2 = vec2<double>;
 
+/**
+ * \brief Adds two vectors and returns the result.
+ *
+ * \tparam T the representation type used by the vectors.
+ *
+ * \param lhs the left-hand side vector.
+ * \param rhs the right-hand side vector.
+ *
+ * \return a vector that is the result of adding the components of the two
+ * vectors.
+ *
+ * \since 0.1.0
+ */
 template <typename T>
 [[nodiscard]] constexpr auto operator+(const vec2<T>& lhs,
                                        const vec2<T>& rhs) noexcept -> vec2<T>
@@ -76,6 +89,19 @@ template <typename T>
   return {lhs.x + rhs.x, lhs.y + rhs.y};
 }
 
+/**
+ * \brief Subtracts two vectors and returns the result.
+ *
+ * \tparam T the representation type used by the vectors.
+ *
+ * \param lhs the left-hand side vector.
+ * \param rhs the right-hand side vector.
+ *
+ * \return a vector that is the result of subtracting the components of the two
+ * vectors.
+ *
+ * \since 0.1.0
+ */
 template <typename T>
 [[nodiscard]] constexpr auto operator-(const vec2<T>& lhs,
                                        const vec2<T>& rhs) noexcept -> vec2<T>
@@ -83,6 +109,18 @@ template <typename T>
   return {lhs.x - rhs.x, lhs.y - rhs.y};
 }
 
+/**
+ * \brief Indicates whether or not two vectors are equal.
+ *
+ * \tparam T the representation type used by the vectors.
+ *
+ * \param lhs the left-hand side vector.
+ * \param rhs the right-hand side vector.
+ *
+ * \return `true` if the two vectors are equal; `false` otherwise.
+ *
+ * \since 0.1.0
+ */
 template <typename T>
 [[nodiscard]] constexpr auto operator==(const vec2<T>& lhs,
                                         const vec2<T>& rhs) noexcept -> bool
@@ -90,6 +128,18 @@ template <typename T>
   return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
+/**
+ * \brief Indicates whether or not two vectors aren't equal.
+ *
+ * \tparam T the representation type used by the vectors.
+ *
+ * \param lhs the left-hand side vector.
+ * \param rhs the right-hand side vector.
+ *
+ * \return `true` if the two vectors aren't equal; `false` otherwise.
+ *
+ * \since 0.1.0
+ */
 template <typename T>
 [[nodiscard]] constexpr auto operator!=(const vec2<T>& lhs,
                                         const vec2<T>& rhs) noexcept -> bool

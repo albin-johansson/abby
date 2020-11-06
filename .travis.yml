@@ -12,10 +12,11 @@ addons:
       - cmake
       - ninja-build
       - build-essential
+      - clang-12
 
 before_script:
-  - export CC=/usr/bin/gcc-9
-  - export CXX=/usr/bin/g++-9
+  - export CC=/usr/bin/clang-12
+  - export CXX=/usr/bin/clang++-12
 
   - g++ --version
   - cmake --version

@@ -64,6 +64,19 @@ struct vec2 final
   T y{};  ///< The y-axis component.
 };
 
+template <typename T>
+using point = vec2<T>;
+
+template <typename T>
+using size = vec2<T>;
+
+// clang-format off
+vec2(float, float)       -> vec2<float>;
+vec2(double, double)     -> vec2<double>;
+vec2(int, int)           -> vec2<int>;
+vec2(unsigned, unsigned) -> vec2<unsigned>;
+// clang-format on
+
 /**
  * \brief Adds two vectors and returns the result.
  *
@@ -221,6 +234,11 @@ struct aabb final
     return width * height;
   }
 };
+
+// clang-format off
+aabb(vec2<float>, vec2<float>) -> aabb<float>;
+aabb(vec2<int>, vec2<int>)     -> aabb<int>;
+// clang-format on
 
 /**
  * \brief Indicates whether or not two AABBs are equal.

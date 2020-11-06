@@ -196,6 +196,18 @@ template <typename T>
   return box;
 }
 
+/**
+ * \brief Returns an AABB that is the union of the supplied pair of AABBs.
+ *
+ * \tparam T the representation type used by the AABBs.
+ *
+ * \param fst the first AABB.
+ * \param snd the second AABB.
+ *
+ * \return an AABB that is the union of the two supplied AABBs.
+ *
+ * \since 0.1.0
+ */
 template <typename T>
 [[nodiscard]] constexpr auto combine(const aabb<T>& fst,
                                      const aabb<T>& snd) noexcept -> aabb<T>

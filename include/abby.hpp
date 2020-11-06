@@ -164,6 +164,21 @@ struct aabb final
   vec2<T> min;  ///< The top-left corner of the AABB.
   vec2<T> max;  ///< The bottom-right corner of the AABB.
 
+  /**
+   * \brief Indicates whether or not the supplied AABB is contained within the
+   * invoked AABB.
+   *
+   * \note The supplied AABB is still considered to be contained within the
+   * invoked AABB if the borders of the inner AABB are overlapping the borders
+   * of the outer AABB.
+   *
+   * \param other the AABB to check.
+   *
+   * \return `true` if the supplied AABB is contained in the AABB; `false`
+   * otherwise.
+   *
+   * \since 0.1.0
+   */
   [[nodiscard]] constexpr auto contains(const aabb<T>& other) const noexcept
       -> bool
   {
@@ -171,6 +186,16 @@ struct aabb final
            (other.min.y >= min.y) && (other.max.y <= max.y);
   }
 
+  /**
+   * \brief Indicates whether or not two AABBs are overlapping each other.
+   *
+   * \param other the other AABB to compare with.
+   *
+   * \return `true` if the two AABBs are overlapping each other; `false`
+   * otherwise.
+   *
+   * \since 0.1.0
+   */
   [[nodiscard]] constexpr auto overlaps(const aabb<T>& other) const noexcept
       -> bool
   {

@@ -27,6 +27,9 @@
  * project also uses the MIT license.
  */
 
+#ifndef ABBY__HEADER__GUARD_
+#define ABBY__HEADER__GUARD_
+
 #include <algorithm>        // min, max
 #include <array>            // array
 #include <cassert>          // assert
@@ -37,9 +40,6 @@
 #include <optional>         // optional
 #include <stack>            // stack
 #include <vector>           // vector
-
-#ifndef ABBY_HEADER_GUARD
-#define ABBY_HEADER_GUARD
 
 namespace abby {
 
@@ -326,6 +326,8 @@ struct aabb_node final
   }
 };
 
+/// \cond FALSE
+
 namespace detail {
 
 template <typename T, typename U>
@@ -355,6 +357,8 @@ template <typename T, typename U>
 }
 
 }  // namespace detail
+
+/// \endcond
 
 /**
  * \class aabb_tree
@@ -816,4 +820,4 @@ class aabb_tree final
 
 }  // namespace abby
 
-#endif  // ABBY_HEADER_GUARD
+#endif  // ABBY__HEADER__GUARD_

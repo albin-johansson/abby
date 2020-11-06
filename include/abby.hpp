@@ -43,8 +43,6 @@
 
 namespace abby {
 
-using opt_int = std::optional<int>;
-
 /**
  * \struct vec2
  *
@@ -65,9 +63,6 @@ struct vec2 final
   T x{};  ///< The x-axis component.
   T y{};  ///< The y-axis component.
 };
-
-using fvec2 = vec2<float>;
-using dvec2 = vec2<double>;
 
 /**
  * \brief Adds two vectors and returns the result.
@@ -202,9 +197,6 @@ struct aabb final
   }
 };
 
-using faabb = aabb<float>;
-using daabb = aabb<double>;
-
 /**
  * \brief Indicates whether or not two AABBs are equal.
  *
@@ -314,10 +306,10 @@ struct aabb_node final
 {
   T id;
   aabb<U> box;
-  opt_int parent;
-  opt_int left;
-  opt_int right;
-  opt_int next;
+  std::optional<int> parent;
+  std::optional<int> left;
+  std::optional<int> right;
+  std::optional<int> next;
 
   /**
    * \brief Indicates whether or not the node is a leaf node.
@@ -524,7 +516,7 @@ class aabb_tree final
       return;
     }
 
-    std::array<std::byte, sizeof(opt_int) * 64> buffer;  // NOLINT
+    std::array<std::byte, sizeof(std::optional<int>) * 64> buffer;  // NOLINT
     std::pmr::monotonic_buffer_resource resource{buffer.data(), sizeof buffer};
     pmr_stack<std::optional<int>> stack{&resource};
 

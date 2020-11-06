@@ -1,0 +1,24 @@
+image: Visual Studio 2019
+
+version: "0.1.0-{build}"
+
+install:
+  - cmake --version
+  - ninja --version
+
+  # Updates PATH to support command-line usage of compiler
+  - call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+
+before_build:
+  - cd %APPVEYOR_BUILD_FOLDER%
+
+  - mkdir build
+  - cd build
+  - cmake .. -DCMAKE_BUILD_TYPE=Debug -G Ninja
+
+build_script:
+  - ninja
+
+test_script:
+  - cd test
+  - abby-test

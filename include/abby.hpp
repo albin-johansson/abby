@@ -155,6 +155,18 @@ struct aabb final
 using faabb = aabb<float>;
 using daabb = aabb<double>;
 
+/**
+ * \brief Indicates whether or not two AABBs are equal.
+ *
+ * \tparam T the representation type used by the AABBs.
+ *
+ * \param lhs the left-hand side AABB.
+ * \param rhs the right-hand side AABB.
+ *
+ * \return `true` if the two AABBs are equal; `false` otherwise.
+ *
+ * \since 0.1.0
+ */
 template <typename T>
 [[nodiscard]] constexpr auto operator==(const aabb<T>& lhs,
                                         const aabb<T>& rhs) noexcept -> bool
@@ -162,6 +174,18 @@ template <typename T>
   return lhs.min == rhs.min && lhs.max == rhs.max;
 }
 
+/**
+ * \brief Indicates whether or not two AABBs aren't equal.
+ *
+ * \tparam T the representation type used by the AABBs.
+ *
+ * \param lhs the left-hand side AABB.
+ * \param rhs the right-hand side AABB.
+ *
+ * \return `true` if the two AABBs aren't equal; `false` otherwise.
+ *
+ * \since 0.1.0
+ */
 template <typename T>
 [[nodiscard]] constexpr auto operator!=(const aabb<T>& lhs,
                                         const aabb<T>& rhs) noexcept -> bool

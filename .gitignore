@@ -37,5 +37,4 @@
 cmake-build-*
 build
 out
-docs/html
-docs/latex
+doxygen-out

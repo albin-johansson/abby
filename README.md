@@ -25,7 +25,7 @@ Collision detection is common in many applications, especially games. Subsequent
     tree.insert(3, abby::make_aabb(abby::vec2{412.0, 132.0}, abby::vec2{66.0, 91.0}));
 
     // Emplaces an AABB, this effectively calls make_aabb behind-the-scenes
-    tree.emplace(4, abby::vec2{150.0, 165.0}, abby::vec2{50.0, 50.0});
+    tree.emplace(4, {150.0, 165.0}, {50.0, 50.0});
 
     // Could also use a stack buffer
     std::vector<int> candidates;  
@@ -41,7 +41,7 @@ Collision detection is common in many applications, especially games. Subsequent
     tree.replace(2, abby::make_aabb(abby::vec2{33.0, 76.0}, abby::vec2{123.0, 155.0}));
 
     // Sets the position of an AABB
-    tree.relocate(2, abby::vec2{12.0, 34.0});
+    tree.relocate(2, {12.0, 34.0});
 
     // Removes an AABB from the tree
     tree.erase(2);

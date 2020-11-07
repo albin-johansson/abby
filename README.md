@@ -4,7 +4,7 @@ A header-only implementation of an AABB tree.
 
 ## Purpose
 
-Collision detection is common in many applications, especially games. Subsequently, collision detection often require checking for potential collision between many different game objects, and as such it is important that the collision detection is efficient. A naive implementation will end up with quadratic, i.e. O(n^2), complexity, which isn't very scalable. By using an AABB tree, bounding hitboxes are stored in a tree according to their position and size, which in turn enables logarithmic complexity for collision detection.
+Collision detection is common in many applications, especially games. Subsequently, collision detection often require checking for potential collision between many different game objects, and as such it is important that the collision detection is efficient. A naive implementation will end up with quadratic complexity, which isn't very scalable. By using an AABB tree, bounding hitboxes are stored in a tree according to their position and size, which in turn enables logarithmic complexity for collision detection.
 
 ## Example
 

@@ -16,26 +16,29 @@ Collision detection is common in many applications, especially games. Subsequent
 
   void foo()
   {
-    // Constructs an AABB tree that uses integers as identifiers
-    abby::aabb_tree<int> tree;
+    // Constructs an AABB tree that uses integers as identifiers and AABBs with double precision
+    abby::aabb_tree<int, double> tree;
 
     // Inserts a few AABBs
-    tree.insert(1, abby::make_aabb(abby::point{10, 10}, abby::size{120, 80}));
-    tree.insert(2, abby::make_aabb(abby::point{88, 63}, abby::size{50, 43}));
-    tree.insert(3, abby::make_aabb(abby::point{412, 132}, abby::size{66, 91}));
+    tree.insert(1, abby::make_aabb(abby::vec2{10.0, 10.0}, abby::vec2{120.0, 80.0}));
+    tree.insert(2, abby::make_aabb(abby::vec2{88.0, 63.0}, abby::vec2{50.0, 43.0}));
+    tree.insert(3, abby::make_aabb(abby::vec2{412.0, 132.0}, abby::vec2{66.0, 91.0}));
 
-    std::vector<int> candidates; // Could also use a stack buffer!
-    tree.query_collisions(1, std::back_inserter(candidates)); // Find collision candidates
+    // Could also use a stack buffer
+    std::vector<int> candidates;  
+
+    // Find collision candidates
+    tree.query_collisions(1, std::back_inserter(candidates));  
     for (const auto candidate : candidates) {
       // Obtains an AABB
       const auto& aabb = tree.get_aabb(candidate);
     }
 
     // Replaces an AABB
-    tree.replace(2, abby::make_aabb(abby::point{33, 76}, abby::size{123, 155}));
+    tree.replace(2, abby::make_aabb(abby::vec2{33.0, 76.0}, abby::vec2{123.0, 155.0}));
 
     // Adjusts the position of an AABB
-    tree.set_position(2, abby::point{12, 34});
+    tree.set_position(2, abby::vec2{12.0, 34.0});
 
     // Removes an AABB from the tree
     tree.erase(2);

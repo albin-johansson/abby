@@ -1,7 +1,7 @@
 dist: focal
 
 language: cpp
-compiler: gcc
+compiler: clang
 
 notifications:
   email: false
@@ -12,11 +12,11 @@ addons:
       - cmake
       - ninja-build
       - build-essential
-      - clang-12
+      - clang-10
 
 before_script:
-  - export CC=/usr/bin/clang-12
-  - export CXX=/usr/bin/clang++-12
+  - export CC=/usr/bin/clang-10
+  - export CXX=/usr/bin/clang++-10
 
   - g++ --version
   - cmake --version

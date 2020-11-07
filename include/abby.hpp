@@ -453,7 +453,7 @@ class aabb_tree final
     m_allocatedNodes = m_nodeCapacity;
 
     const auto size = static_cast<int>(m_nodeCapacity);
-    for (int index = 0; index < size; ++index) {
+    for (auto index = 0; index < size; ++index) {
       auto& node = m_nodes.emplace_back();
       node.next = index + 1;
     }
@@ -670,7 +670,7 @@ class aabb_tree final
     m_nodeCapacity += m_growthSize;
     m_nodes.resize(m_nodeCapacity);
 
-    for (index_type index = m_allocatedNodes; index < m_nodeCapacity; ++index) {
+    for (auto index = m_allocatedNodes; index < m_nodeCapacity; ++index) {
       auto& node = m_nodes.at(index);
       node.next = index + 1;
     }

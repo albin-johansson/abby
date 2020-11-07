@@ -40,8 +40,8 @@ Collision detection is common in many applications, especially games. Subsequent
     // Replaces an AABB
     tree.replace(2, abby::make_aabb(abby::vec2{33.0, 76.0}, abby::vec2{123.0, 155.0}));
 
-    // Adjusts the position of an AABB
-    tree.set_position(2, abby::vec2{12.0, 34.0});
+    // Sets the position of an AABB
+    tree.relocate(2, abby::vec2{12.0, 34.0});
 
     // Removes an AABB from the tree
     tree.erase(2);

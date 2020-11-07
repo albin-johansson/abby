@@ -30,8 +30,8 @@ TEST_SUITE("aabb_tree")
     CHECK(!tree.is_empty());
     CHECK(tree.size() == 1);
 
-    const abby::vec2 position {89.3f, 123.4f};
-    const abby::vec2 size {93.2f, 933.3f};
+    const abby::vec2 position{89.3f, 123.4f};
+    const abby::vec2 size{93.2f, 933.3f};
     tree.emplace(2, position, size);
     CHECK(tree.size() == 2);
 
@@ -97,17 +97,17 @@ TEST_SUITE("aabb_tree")
     }
   }
 
-  TEST_CASE("aabb_tree::set_position")
+  TEST_CASE("aabb_tree::relocate")
   {
     abby::aabb_tree<int> tree;
-    CHECK_NOTHROW(tree.set_position(0, {}));
+    CHECK_NOTHROW(tree.relocate(0, {}));
 
     tree.insert(7, abby::make_aabb<float>({12, 34}, {56, 78}));
     tree.insert(2, {{1, 2}, {3, 4}});
     tree.insert(84, {{91, 22}, {422, 938}});
 
     const abby::vec2<float> pos{389, 534};
-    tree.set_position(7, pos);
+    tree.relocate(7, pos);
 
     CHECK(tree.size() == 3);
     CHECK(tree.get_aabb(7).min == pos);

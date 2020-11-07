@@ -551,7 +551,7 @@ class aabb_tree final
    *
    * \since 0.1.0
    */
-  void set_position(const key_type& key, const vector_type& position)
+  void relocate(const key_type& key, const vector_type& position)
   {
     if (!m_indexMap.count(key)) {
       return;

@@ -460,7 +460,7 @@ class aabb_tree final
   /**
    * \brief Inserts an AABB in the tree.
    *
-   * \pre `key` cannot be in use at the time of invoking the function.
+   * \pre `key` cannot be in use at the time of invoking this function.
    *
    * \param key the ID that will be associated with the box.
    * \param box the AABB that will be added.
@@ -478,6 +478,27 @@ class aabb_tree final
 
     insert_leaf(index);
     m_indexMap.emplace(key, index);
+  }
+
+  /**
+   * \brief Adds an AABB to the tree.
+   *
+   * \note This function is equivalent to calling `insert` with the AABB
+   * obtained from `make_aabb` using the supplied position and size.
+   *
+   * \pre `key` cannot be in use at the time of invoking this function.
+   *
+   * \param key the ID that will be associated with the AABB.
+   * \param position the position of the AABB.
+   * \param size the size of the AABB.
+   *
+   * \since 0.1.0
+   */
+  void emplace(const key_type& key,
+               const vector_type& position,
+               const vector_type& size)
+  {
+    insert(key, make_aabb(position, size));
   }
 
   /**

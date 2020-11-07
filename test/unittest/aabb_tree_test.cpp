@@ -22,6 +22,24 @@ TEST_SUITE("aabb_tree")
     CHECK(tree.size() == 3);
   }
 
+  TEST_CASE("aabb_tree::emplace")
+  {
+    abby::aabb_tree<int> tree;
+
+    tree.emplace(1, abby::vec2{1.0f, 1.0f}, abby::vec2{10.0f, 12.0f});
+    CHECK(!tree.is_empty());
+    CHECK(tree.size() == 1);
+
+    const abby::vec2 position {89.3f, 123.4f};
+    const abby::vec2 size {93.2f, 933.3f};
+    tree.emplace(2, position, size);
+    CHECK(tree.size() == 2);
+
+    const auto& aabb = tree.get_aabb(2);
+    CHECK(aabb.min == position);
+    CHECK(aabb.max == position + size);
+  }
+
   TEST_CASE("aabb_tree::erase")
   {
     abby::aabb_tree<int> tree;

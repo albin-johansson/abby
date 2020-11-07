@@ -19,10 +19,13 @@ Collision detection is common in many applications, especially games. Subsequent
     // Constructs an AABB tree that uses integers as identifiers and AABBs with double precision
     abby::aabb_tree<int, double> tree;
 
-    // Inserts a few AABBs
+    // Inserts a few AABBs (make_aabb takes a position and a size)
     tree.insert(1, abby::make_aabb(abby::vec2{10.0, 10.0}, abby::vec2{120.0, 80.0}));
     tree.insert(2, abby::make_aabb(abby::vec2{88.0, 63.0}, abby::vec2{50.0, 43.0}));
     tree.insert(3, abby::make_aabb(abby::vec2{412.0, 132.0}, abby::vec2{66.0, 91.0}));
+
+    // Emplaces an AABB, this effectively calls make_aabb behind-the-scenes
+    tree.emplace(4, abby::vec2{150.0, 165.0}, abby::vec2{50.0, 50.0});
 
     // Could also use a stack buffer
     std::vector<int> candidates;  

@@ -620,7 +620,7 @@ class aabb_tree final
    */
   [[nodiscard]] auto get_aabb(const key_type& key) const -> const aabb_type&
   {
-    return m_nodes.at(m_indexMap.at(key)).box;
+    return m_nodes.at(static_cast<size_type>(m_indexMap.at(key))).box;
   }
 
   /**
@@ -672,7 +672,7 @@ class aabb_tree final
 
     for (auto index = m_allocatedNodes; index < m_nodeCapacity; ++index) {
       auto& node = m_nodes.at(index);
-      node.next = index + 1;
+      node.next = static_cast<index_type>(index + 1);
     }
 
     m_nodes.at(m_nodeCapacity - 1).next.reset();

@@ -430,7 +430,7 @@ template <typename T, typename U>
 /// \endcond
 
 /**
- * \class aabb_tree
+ * \class tree
  *
  * \brief Represents a tree of AABBs used for efficient collision detection.
  *
@@ -444,7 +444,7 @@ template <typename T, typename U>
  * \headerfile abby.hpp
  */
 template <typename Key, typename T = float>
-class aabb_tree final
+class tree final
 {
   template <typename U>
   using pmr_stack = std::stack<U, std::pmr::deque<U>>;
@@ -457,7 +457,7 @@ class aabb_tree final
   using node_type = aabb_node<key_type, T>;
   using index_type = int;
 
-  aabb_tree()
+  tree()
   {
     m_nodes.reserve(m_nodeCapacity);
     m_allocatedNodes = m_nodeCapacity;

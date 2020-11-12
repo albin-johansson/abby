@@ -4,11 +4,11 @@
 
 #include "abby.hpp"
 
-TEST_SUITE("aabb_tree")
+TEST_SUITE("tree")
 {
-  TEST_CASE("aabb_tree::insert")
+  TEST_CASE("tree::insert")
   {
-    abby::aabb_tree<int> tree;
+    abby::tree<int> tree;
     REQUIRE(tree.is_empty());
 
     tree.insert(1, abby::make_aabb<float>({0, 0}, {100, 100}));
@@ -22,9 +22,9 @@ TEST_SUITE("aabb_tree")
     CHECK(tree.size() == 3);
   }
 
-  TEST_CASE("aabb_tree::emplace")
+  TEST_CASE("tree::emplace")
   {
-    abby::aabb_tree<int> tree;
+    abby::tree<int> tree;
 
     tree.emplace(1, abby::vec2{1.0f, 1.0f}, abby::vec2{10.0f, 12.0f});
     CHECK(!tree.is_empty());
@@ -40,9 +40,9 @@ TEST_SUITE("aabb_tree")
     CHECK(aabb.max == position + size);
   }
 
-  TEST_CASE("aabb_tree::erase")
+  TEST_CASE("tree::erase")
   {
-    abby::aabb_tree<int> tree;
+    abby::tree<int> tree;
     CHECK_NOTHROW(tree.erase(-1));
     CHECK_NOTHROW(tree.erase(0));
     CHECK_NOTHROW(tree.erase(1));
@@ -62,9 +62,9 @@ TEST_SUITE("aabb_tree")
     CHECK(tree.is_empty());
   }
 
-  TEST_CASE("aabb_tree::replace")
+  TEST_CASE("tree::replace")
   {
-    abby::aabb_tree<int> tree;
+    abby::tree<int> tree;
     CHECK_NOTHROW(tree.replace(0, {}));
 
     tree.insert(35, abby::make_aabb<float>({34, 63}, {31, 950}));
@@ -97,9 +97,9 @@ TEST_SUITE("aabb_tree")
     }
   }
 
-  TEST_CASE("aabb_tree::relocate")
+  TEST_CASE("tree::relocate")
   {
-    abby::aabb_tree<int> tree;
+    abby::tree<int> tree;
     CHECK_NOTHROW(tree.relocate(0, {}));
 
     tree.insert(7, abby::make_aabb<float>({12, 34}, {56, 78}));
@@ -113,11 +113,11 @@ TEST_SUITE("aabb_tree")
     CHECK(tree.get_aabb(7).min == pos);
   }
 
-  TEST_CASE("aabb_tree::query_collisions")
+  TEST_CASE("tree::query_collisions")
   {
     SUBCASE("Empty tree")
     {
-      abby::aabb_tree<int> tree;
+      abby::tree<int> tree;
       std::vector<int> candidates;
 
       CHECK_NOTHROW(tree.query_collisions(0, std::back_inserter(candidates)));
@@ -126,7 +126,7 @@ TEST_SUITE("aabb_tree")
 
     SUBCASE("Populated tree")
     {
-      abby::aabb_tree<int> tree;
+      abby::tree<int> tree;
       std::vector<int> candidates;
 
       tree.insert(1, abby::make_aabb<float>({10, 10}, {100, 100}));
@@ -148,9 +148,9 @@ TEST_SUITE("aabb_tree")
     }
   }
 
-  TEST_CASE("aabb_tree::get_aabb")
+  TEST_CASE("tree::get_aabb")
   {
-    abby::aabb_tree<int> tree;
+    abby::tree<int> tree;
     CHECK_THROWS(tree.get_aabb(0));
 
     const auto aabb = abby::make_aabb<float>({12, 34}, {56, 78});
@@ -158,9 +158,9 @@ TEST_SUITE("aabb_tree")
     CHECK(tree.get_aabb(12) == aabb);
   }
 
-  TEST_CASE("aabb_tree::size")
+  TEST_CASE("tree::size")
   {
-    abby::aabb_tree<int> tree;
+    abby::tree<int> tree;
     CHECK(tree.size() == 0);
 
     tree.insert(0, {});
@@ -176,9 +176,9 @@ TEST_SUITE("aabb_tree")
     CHECK(tree.size() == 0);
   }
 
-  TEST_CASE("aabb_tree::is_empty")
+  TEST_CASE("tree::is_empty")
   {
-    abby::aabb_tree<int> tree;
+    abby::tree<int> tree;
     CHECK(tree.is_empty());
 
     tree.insert(123, {});

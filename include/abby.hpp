@@ -254,6 +254,12 @@ struct aabb final
     const auto height = max.y - min.y;
     return width * height;
   }
+
+  [[nodiscard]] constexpr auto center() const noexcept -> vec2<T>
+  {
+    const auto sum = min + max;
+    return { sum.x / 2.0, sum / 2.0 };
+  }
 };
 
 // clang-format off

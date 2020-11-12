@@ -460,7 +460,7 @@ class tree final
   tree()
   {
     m_nodes.reserve(m_nodeCapacity);
-    m_allocatedNodes = m_nodeCapacity;
+    m_nodeCount = m_nodeCapacity;
 
     const auto size = static_cast<int>(m_nodeCapacity);
     for (auto index = 0; index < size; ++index) {
@@ -690,24 +690,24 @@ class tree final
   opt_index m_rootIndex{};
   opt_index m_nextFreeNodeIndex{};
 
-  size_type m_allocatedNodes{};
+  size_type m_nodeCount{};
   size_type m_nodeCapacity{24};
   size_type m_growthSize{m_nodeCapacity};
 
   void grow_pool()
   {
-    assert(m_allocatedNodes == m_nodeCapacity);
+    assert(m_nodeCount == m_nodeCapacity);
 
     m_nodeCapacity += m_growthSize;
     m_nodes.resize(m_nodeCapacity);
 
-    for (auto index = m_allocatedNodes; index < m_nodeCapacity; ++index) {
+    for (auto index = m_nodeCount; index < m_nodeCapacity; ++index) {
       auto& node = m_nodes.at(index);
       node.next = static_cast<index_type>(index + 1);
     }
 
     m_nodes.at(m_nodeCapacity - 1).next.reset();
-    m_nextFreeNodeIndex = static_cast<index_type>(m_allocatedNodes);
+    m_nextFreeNodeIndex = static_cast<index_type>(m_nodeCount);
   }
 
   [[nodiscard]] auto allocate_node() -> index_type
@@ -720,7 +720,7 @@ class tree final
     const auto index = m_nextFreeNodeIndex.value();
     const auto& node = m_nodes.at(index);
     m_nextFreeNodeIndex = node.next;
-    ++m_allocatedNodes;
+    ++m_nodeCount;
 
     return index;
   }
@@ -730,7 +730,7 @@ class tree final
     auto& node = m_nodes.at(nodeIndex);
     node.next = m_nextFreeNodeIndex;
     m_nextFreeNodeIndex = nodeIndex;
-    --m_allocatedNodes;
+    --m_nodeCount;
   }
 
   void fix_upwards_tree(opt_index nodeIndex)

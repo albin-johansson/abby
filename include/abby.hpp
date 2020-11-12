@@ -208,8 +208,12 @@ struct aabb final
   [[nodiscard]] constexpr auto contains(const aabb<T>& other) const noexcept
       -> bool
   {
-    return (other.min.x >= min.x) && (other.max.x <= max.x) &&
-           (other.min.y >= min.y) && (other.max.y <= max.y);
+    if ((other.min.x < min.x) || (other.max.x > max.x) ||
+        (other.min.y < min.y) || (other.max.y > max.y)) {
+      return false;
+    } else {
+      return true;
+    }
   }
 
   /**
@@ -225,8 +229,12 @@ struct aabb final
   [[nodiscard]] constexpr auto overlaps(const aabb<T>& other) const noexcept
       -> bool
   {
-    return (max.x > other.min.x) && (min.x < other.max.x) &&
-           (max.y > other.min.y) && (min.y < other.max.y);
+    if ((other.max.x < min.x || other.min.x > max.x) ||
+        (other.max.y < min.y || other.min.y > max.y)) {
+      return false;
+    } else {
+      return true;
+    }
   }
 
   /**

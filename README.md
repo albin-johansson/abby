@@ -31,7 +31,7 @@ Collision detection is common in many applications, especially games. Subsequent
     std::vector<int> candidates;  
 
     // Find collision candidates
-    tree.query_collisions(1, std::back_inserter(candidates));  
+    tree.query(1, std::back_inserter(candidates));  
     for (const auto candidate : candidates) {
       // Obtains an AABB
       const auto& aabb = tree.get_aabb(candidate);

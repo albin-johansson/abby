@@ -1049,7 +1049,7 @@ class tree final  // TODO revamp: relocate, query,
     }
 
     auto& leafNode = m_nodes.at(leafIndex);
-    const auto& leafAabb = leafNode.box;
+    const auto leafAabb = leafNode.box;  // copy leaf nodes AABB
     const auto siblingIndex = find_best_sibling(leafAabb);
     auto& sibling = m_nodes.at(siblingIndex);
 

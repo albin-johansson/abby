@@ -50,4 +50,4 @@ Collision detection is common in many applications, especially games. Subsequent
 
 ## Acknowledgements
 
-The implementation of the AABB tree was based on the AABB implementation in the Simple Voxel Engine project, which can be found [here](https://github.com/JamesRandall/SimpleVoxelEngine). It also uses the MIT license.
+The implementation of an AABB tree was based on two other AABB tree implementations: the [AABBCC](https://github.com/lohedges/aabbcc) library and the AABB tree in the [Simple Voxel Engine](https://github.com/JamesRandall/SimpleVoxelEngine) project. This library is an adaptation of those implementations. The AABBCC library uses the Zlib license and the Simple Voxel Engine project uses the MIT license.

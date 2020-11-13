@@ -1,8 +1,7 @@
 MIT License
 
-Copyright (c) 2017 James Randall
-Copyright (c) 2019-2020 Albin Johansson: adapted and improved original
-Simple Voxel Engine source code.
+Copyright (c) 2019-2020 Albin Johansson: adapted and improved source code from the AABBCC and Simple
+Voxel Engine projects.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +21,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-This code was originally based on the AABB tree implementation in the Simple Voxel Engine project,
-which can be found here: https://github.com/JamesRandall/SimpleVoxelEngine. The Simple Voxel Engine
-project uses the MIT license.
+The code was based on two AABB tree implementations, one by James Randall (Simple Voxel Engine) and
+another by Lester Hedges (AABBCC).
+
+The Simple Voxel Engine uses the MIT license: https://github.com/JamesRandall/SimpleVoxelEngine.
+The AABBCC library uses the Zlib license: https://github.com/lohedges/aabbcc.

@@ -25,24 +25,33 @@ TEST_SUITE("tree")
   TEST_CASE("tree::emplace")
   {
     abby::tree<int> tree;
+    tree.set_fattening_factor(std::nullopt);
 
-    tree.emplace(1, abby::vec2{1.0f, 1.0f}, abby::vec2{10.0f, 12.0f});
+    tree.emplace(1, abby::vec2{1.0f, 2.0f}, abby::vec2{10.0f, 12.0f});
     CHECK(!tree.is_empty());
     CHECK(tree.size() == 1);
+
+    const auto& fst = tree.get_aabb(1);
+    CHECK(fst.min.x == 1.0f);
+    CHECK(fst.min.y == 2.0f);
+    CHECK(fst.max.x == 11.0f);
+    CHECK(fst.max.y == 14.0f);
 
     const abby::vec2 position{89.3f, 123.4f};
     const abby::vec2 size{93.2f, 933.3f};
     tree.emplace(2, position, size);
     CHECK(tree.size() == 2);
 
-    const auto& aabb = tree.get_aabb(2);
-    CHECK(aabb.min == position);
-    CHECK(aabb.max == position + size);
+    const auto& snd = tree.get_aabb(2);
+    CHECK(snd.min == position);
+    CHECK(snd.max == position + size);
   }
 
   TEST_CASE("tree::erase")
   {
     abby::tree<int> tree;
+    tree.set_fattening_factor(std::nullopt);
+
     CHECK_NOTHROW(tree.erase(-1));
     CHECK_NOTHROW(tree.erase(0));
     CHECK_NOTHROW(tree.erase(1));
@@ -65,6 +74,8 @@ TEST_SUITE("tree")
   TEST_CASE("tree::replace")
   {
     abby::tree<int> tree;
+    tree.set_fattening_factor(std::nullopt);
+
     CHECK_NOTHROW(tree.replace(0, {}));
 
     tree.insert(35, abby::make_aabb<float>({34, 63}, {31, 950}));
@@ -76,13 +87,20 @@ TEST_SUITE("tree")
 
     SUBCASE("Update to smaller AABB")
     {
-      // When the new AABB is smaller, nothing is done
       tree.replace(id, abby::make_aabb<float>({10, 10}, {50, 50}));
+      {
+        const auto& aabb = tree.get_aabb(id);
+        CHECK(original.min == aabb.min);
+        CHECK(original.max == aabb.max);
+        CHECK(original.area() == aabb.area());
+      }
 
-      const auto& actual = tree.get_aabb(id);
-      CHECK(original.min == actual.min);
-      CHECK(original.max == actual.max);
-      CHECK(original.area() == actual.area());
+      tree.replace(id, abby::make_aabb<float>({10, 10}, {50, 50}), true);
+      const auto& aabb = tree.get_aabb(id);
+      CHECK(aabb.min.x == 10);
+      CHECK(aabb.min.y == 10);
+      CHECK(aabb.max.y == 60);
+      CHECK(aabb.max.y == 60);
     }
 
     SUBCASE("Update to larger AABB")
@@ -100,6 +118,8 @@ TEST_SUITE("tree")
   TEST_CASE("tree::relocate")
   {
     abby::tree<int> tree;
+    tree.set_fattening_factor(std::nullopt);
+
     CHECK_NOTHROW(tree.relocate(0, {}));
 
     tree.insert(7, abby::make_aabb<float>({12, 34}, {56, 78}));
@@ -113,14 +133,14 @@ TEST_SUITE("tree")
     CHECK(tree.get_aabb(7).min == pos);
   }
 
-  TEST_CASE("tree::query_collisions")
+  TEST_CASE("tree::query")
   {
     SUBCASE("Empty tree")
     {
       abby::tree<int> tree;
       std::vector<int> candidates;
 
-      CHECK_NOTHROW(tree.query_collisions(0, std::back_inserter(candidates)));
+      CHECK_NOTHROW(tree.query(0, std::back_inserter(candidates)));
       CHECK(candidates.empty());
     }
 
@@ -133,7 +153,7 @@ TEST_SUITE("tree")
       tree.insert(2, abby::make_aabb<float>({90, 10}, {50, 50}));
       tree.insert(3, abby::make_aabb<float>({10, 90}, {25, 25}));
 
-      tree.query_collisions(1, std::back_inserter(candidates));
+      tree.query(1, std::back_inserter(candidates));
       CHECK(candidates.size() == 2);
       CHECK_FALSE(
           std::any_of(begin(candidates), end(candidates), [](auto candidate) {
@@ -151,6 +171,8 @@ TEST_SUITE("tree")
   TEST_CASE("tree::get_aabb")
   {
     abby::tree<int> tree;
+    tree.set_fattening_factor(std::nullopt);
+
     CHECK_THROWS(tree.get_aabb(0));
 
     const auto aabb = abby::make_aabb<float>({12, 34}, {56, 78});

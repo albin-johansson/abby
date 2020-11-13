@@ -258,7 +258,7 @@ struct aabb final
   [[nodiscard]] constexpr auto center() const noexcept -> vec2<T>
   {
     const auto sum = min + max;
-    return { sum.x / 2.0, sum / 2.0 };
+    return {sum.x / 2.0, sum / 2.0};
   }
 };
 
@@ -380,6 +380,9 @@ struct aabb_node final
   std::optional<int> right;
   std::optional<int> next;
 
+  // Height of the node: 0 for leaves and `std::nullopt` for free nodes.
+  std::optional<int> height;
+
   /**
    * \brief Indicates whether or not the node is a leaf node.
    *
@@ -402,7 +405,7 @@ namespace detail {
 template <typename T, typename U>
 [[nodiscard]] constexpr auto get_left_cost(const aabb_node<T, U>& left,
                                            const aabb_node<T, U>& leaf,
-                                           float minimumCost) -> float
+                                           const float minimumCost) -> float
 {
   if (left.is_leaf()) {
     return combine(leaf.box, left.box).area() + minimumCost;
@@ -415,7 +418,7 @@ template <typename T, typename U>
 template <typename T, typename U>
 [[nodiscard]] constexpr auto get_right_cost(const aabb_node<T, U>& right,
                                             const aabb_node<T, U>& leaf,
-                                            float minimumCost) -> float
+                                            const float minimumCost) -> float
 {
   if (right.is_leaf()) {
     return combine(leaf.box, right.box).area() + minimumCost;
@@ -428,6 +431,21 @@ template <typename T, typename U>
 }  // namespace detail
 
 /// \endcond
+
+template <typename T>
+constexpr void fatten(aabb<T>& aabb, std::optional<double> factor) noexcept
+{
+  if (!factor) {
+    return;
+  }
+
+  const auto size = aabb.max - aabb.min;
+
+  aabb.min.x -= (*factor * size.x);
+  aabb.min.y -= (*factor * size.y);
+  aabb.max.x += (*factor * size.x);
+  aabb.max.y += (*factor * size.y);
+}
 
 /**
  * \class tree
@@ -444,7 +462,7 @@ template <typename T, typename U>
  * \headerfile abby.hpp
  */
 template <typename Key, typename T = float>
-class tree final
+class tree final  // TODO revamp: relocate, query,
 {
   template <typename U>
   using pmr_stack = std::stack<U, std::pmr::deque<U>>;
@@ -459,16 +477,12 @@ class tree final
 
   tree()
   {
-    m_nodes.reserve(m_nodeCapacity);
-    m_nodeCount = m_nodeCapacity;
-
-    const auto size = static_cast<int>(m_nodeCapacity);
-    for (auto index = 0; index < size; ++index) {
-      auto& node = m_nodes.emplace_back();
-      node.next = index + 1;
+    m_nodes.resize(m_nodeCapacity);
+    for (auto i = 0; i < m_nodeCapacity; ++i) {
+      auto& node = m_nodes.at(i);
+      node.next = i + 1;
+      node.height = std::nullopt;
     }
-
-    m_nodes.at(size - 1).next.reset();
   }
 
   /**
@@ -483,14 +497,18 @@ class tree final
    */
   void insert(const key_type& key, const aabb_type& box)
   {
-    assert(!m_indexMap.count(key));
+    assert(!m_indexMap.count(key));  // Can't have same key multiple times!
 
     const auto index = allocate_node();
+
     auto& node = m_nodes.at(index);
     node.box = box;
     node.id = key;
+    node.height = 0;
 
+    fatten(node.box, m_thicknessFactor);
     insert_leaf(index);
+
     m_indexMap.emplace(key, index);
   }
 
@@ -529,9 +547,13 @@ class tree final
   {
     if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
       const auto index = it->second;
+      m_indexMap.erase(it);
+
+      assert(index < m_nodeCapacity);
+      assert(m_nodes.at(index).is_leaf());
+
       remove_leaf(index);
-      deallocate_node(index);
-      m_indexMap.erase(key);
+      free_node(index);
     }
   }
 
@@ -543,13 +565,35 @@ class tree final
    *
    * \param key the ID associated with the AABB that will be replaced.
    * \param box the new AABB that will be associated with the specified ID.
+   * \param forceReinsert indicates whether or not the AABB is always
+   * reinserted, which wont happen if this is set to `true` and the new AABB is
+   * within the old AABB.
    *
    * \since 0.1.0
    */
-  void replace(const key_type& key, const aabb_type& box)
+  void replace(const key_type& key,
+               const aabb_type& box,
+               bool forceReinsert = false)
   {
     if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
-      update_leaf(it->second, box);
+      const auto nodeIndex = it->second;
+
+      assert(nodeIndex < m_nodeCapacity);
+      assert(m_nodes.at(nodeIndex).is_leaf());
+
+      // No need to update if the particle is still within its fattened AABB.
+      if (!forceReinsert && m_nodes.at(nodeIndex).box.contains(box)) {
+        return;
+      }
+
+      // Remove current leaf
+      remove_leaf(nodeIndex);
+
+      auto copy = box;
+      fatten(copy, m_thicknessFactor);
+      m_nodes.at(nodeIndex).box = copy;
+
+      insert_leaf(nodeIndex);
     }
   }
 
@@ -567,17 +611,15 @@ class tree final
    */
   void relocate(const key_type& key, const vector_type& position)
   {
-    if (!m_indexMap.count(key)) {
-      return;
+    if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
+      auto box = m_nodes.at(it->second).box;
+
+      const auto size = box.max - box.min;
+      box.min = position;
+      box.max = box.min + size;
+
+      replace(key, box);
     }
-
-    const auto previous = get_aabb(key);
-
-    aabb_type newBox;
-    newBox.min = position;
-    newBox.max = position + (previous.max - previous.min);
-
-    replace(key, newBox);
   }
 
   void query_collisions(const key_type&, std::nullptr_t) const = delete;
@@ -594,6 +636,7 @@ class tree final
    * \details The output iterator can for instance be obtained using
    * `std::back_inserter`, if you're writing to a standard container.
    *
+   * \tparam bufferSize the size of the initial stack buffer.
    * \tparam OutIterator the type of the output iterator.
    *
    * \param key the ID associated with the AABB to obtain collision candidates
@@ -603,39 +646,74 @@ class tree final
    *
    * \since 0.1.0
    */
-  template <typename OutIterator>
-  void query_collisions(const key_type& key, OutIterator iterator) const
+  template <size_type bufferSize = 256, typename OutIterator>
+  void query(const key_type& key, OutIterator iterator) const
   {
-    if (!m_indexMap.count(key)) {
-      return;
-    }
+    if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
+      const auto& sourceNode = m_nodes.at(it->second);
 
-    std::array<std::byte, sizeof(std::optional<int>) * 64> buffer;  // NOLINT
-    std::pmr::monotonic_buffer_resource resource{buffer.data(), sizeof buffer};
-    pmr_stack<std::optional<int>> stack{&resource};
+      std::array<std::byte, sizeof(opt_index) * bufferSize> buffer;  // NOLINT
+      std::pmr::monotonic_buffer_resource resource{buffer.data(),
+                                                   sizeof buffer};
 
-    const auto& box = get_aabb(key);
+      pmr_stack<opt_index> stack{&resource};
+      stack.push(m_rootIndex);
+      while (!stack.empty()) {
+        const auto nodeIndex = stack.top();
+        stack.pop();
 
-    stack.push(m_rootIndex);
-    while (!stack.empty()) {
-      const auto nodeIndex = stack.top();
-      stack.pop();
+        if (!nodeIndex) {
+          continue;
+        }
 
-      if (!nodeIndex) {
-        continue;
-      }
+        const auto& node = m_nodes.at(*nodeIndex);
+        const auto copy = node.box;
 
-      const auto& node = m_nodes.at(*nodeIndex);
-      if (node.box.overlaps(box)) {
-        if (node.is_leaf() && node.id != key) {
-          *iterator = node.id;
-          ++iterator;
-        } else {
-          stack.push(node.left);
-          stack.push(node.right);
+        // Test for overlap between the AABBs
+        if (node.box.overlaps(copy)) {
+          // Check that we're at a leaf node
+          if (node.is_leaf()) {
+            // Can't interact with itself
+            if (node.id != key) {
+              *iterator = node.id;
+              ++iterator;
+            }
+          } else {
+            stack.push(node.left);
+            stack.push(node.right);
+          }
         }
       }
     }
+  }
+
+        if (!nodeIndex) {
+          continue;
+        }
+
+        const auto& node = m_nodes.at(*nodeIndex);
+        const auto copy = node.box;
+
+        // Test for overlap between the AABBs
+        if (node.box.overlaps(copy)) {
+          // Check that we're at a leaf node
+          if (node.is_leaf()) {
+            // Can't interact with itself
+            if (node.id != key) {
+              callable(node.id);
+            }
+          } else {
+            stack.push(node.left);
+            stack.push(node.right);
+          }
+        }
+      }
+    }
+  }
+
+  void set_fattening_factor(std::optional<double> factor) noexcept
+  {
+    m_thicknessFactor = factor;
   }
 
   /**
@@ -687,29 +765,49 @@ class tree final
   std::map<key_type, index_type> m_indexMap;
   std::vector<node_type> m_nodes;
 
-  opt_index m_rootIndex{};
-  opt_index m_nextFreeNodeIndex{};
+  opt_index m_rootIndex;
+  opt_index m_nextFreeNodeIndex{0};
 
-  size_type m_nodeCount{};
+  size_type m_nodeCount{0};
   size_type m_nodeCapacity{24};
-  size_type m_growthSize{m_nodeCapacity};
 
+  std::optional<double> m_thicknessFactor{0.05};
+
+  /**
+   * \brief Doubles the size of the node pool.
+   *
+   * \since 0.1.0
+   */
   void grow_pool()
   {
     assert(m_nodeCount == m_nodeCapacity);
 
-    m_nodeCapacity += m_growthSize;
+    m_nodeCapacity *= 2;  // We need more free nodes -> increase pool size
     m_nodes.resize(m_nodeCapacity);
 
-    for (auto index = m_nodeCount; index < m_nodeCapacity; ++index) {
+    for (auto index = m_nodeCount; index < (m_nodeCapacity - 1); ++index) {
       auto& node = m_nodes.at(index);
       node.next = static_cast<index_type>(index + 1);
+      // node.height = std::nullopt;
     }
 
-    m_nodes.at(m_nodeCapacity - 1).next.reset();
+    m_nodes.at(m_nodeCapacity - 1).next = std::nullopt;
+
+    // Update the index of the next free node
     m_nextFreeNodeIndex = static_cast<index_type>(m_nodeCount);
   }
 
+  /**
+   * \brief Returns the index to a new node.
+   *
+   * \details This function will grow the node pool if there are no available
+   * nodes. Otherwise, this function will just increment the next free node
+   * index and return the index of the previous next free node.
+   *
+   * \return the index of the allocated node.
+   *
+   * \since 0.1.0
+   */
   [[nodiscard]] auto allocate_node() -> index_type
   {
     // if we have no free tree nodes then grow the pool
@@ -717,15 +815,17 @@ class tree final
       grow_pool();
     }
 
-    const auto index = m_nextFreeNodeIndex.value();
-    const auto& node = m_nodes.at(index);
+    const auto index = m_nextFreeNodeIndex.value();  // Index of new node
+    auto& node = m_nodes.at(index);
+    node.height = 0;
+
     m_nextFreeNodeIndex = node.next;
     ++m_nodeCount;
 
     return index;
   }
 
-  void deallocate_node(index_type nodeIndex)
+  void free_node(index_type nodeIndex)
   {
     auto& node = m_nodes.at(nodeIndex);
     node.next = m_nextFreeNodeIndex;
@@ -733,178 +833,335 @@ class tree final
     --m_nodeCount;
   }
 
-  void fix_upwards_tree(opt_index nodeIndex)
+  void rotate_right(const index_type nodeIndex,
+                    const index_type leftIndex,
+                    const index_type rightIndex)
+  {
+    auto& node = m_nodes.at(nodeIndex);
+    auto& rightNode = m_nodes.at(rightIndex);
+
+    const auto rightLeft = rightNode.left;
+    const auto rightRight = rightNode.right;
+
+    assert(rightLeft < m_nodeCapacity);
+    assert(rightRight < m_nodeCapacity);
+
+    // Swap node and its right-hand child
+    rightNode.left = rightIndex;
+    rightNode.parent = node.parent;
+    node.parent = rightIndex;
+
+    // The node's old parent should now point to its right-hand child
+    if (rightNode.parent) {
+      auto& rightNodeParent = m_nodes.at(*rightNode.parent);
+      if (rightNodeParent.left == nodeIndex) {
+        rightNodeParent.left = rightIndex;
+      } else {
+        assert(rightNodeParent.right == nodeIndex);
+        rightNodeParent.right = rightIndex;
+      }
+    } else {
+      m_rootIndex = rightIndex;
+    }
+
+    // Rotate
+    const auto& leftNode = m_nodes.at(leftIndex);
+    auto& rightLeftNode = m_nodes.at(rightLeft.value());
+    auto& rightRightNode = m_nodes.at(rightRight.value());
+
+    if (rightLeftNode.height > rightRightNode.height) {
+      rightNode.right = rightLeft;
+      node.right = rightRight;
+
+      rightRightNode.parent = nodeIndex;
+
+      node.box = combine(leftNode.box, rightRightNode.box);
+      rightNode.box = combine(node.box, rightLeftNode.box);
+
+      node.height =
+          1 + std::max(leftNode.height.value(), rightRightNode.height.value());
+      rightNode.height =
+          1 + std::max(node.height.value(), rightLeftNode.height.value());
+    } else {
+      rightNode.right = rightRight;
+      node.right = rightLeft;
+
+      rightLeftNode.parent = nodeIndex;
+      node.box = combine(leftNode.box, rightLeftNode.box);
+      rightNode.box = combine(node.box, rightRightNode.box);
+
+      node.height =
+          1 + std::max(leftNode.height.value(), rightLeftNode.height.value());
+      rightNode.height =
+          1 + std::max(node.height.value(), rightRightNode.height.value());
+    }
+  }
+
+  void rotate_left(const index_type nodeIndex,
+                   const index_type leftIndex,
+                   const index_type rightIndex)
+  {
+    auto& node = m_nodes.at(nodeIndex);
+    auto& leftNode = m_nodes.at(leftIndex);
+    const auto leftLeft = leftNode.left;
+    const auto leftRight = leftNode.right;
+
+    assert(leftLeft < m_nodeCapacity);
+    assert(leftRight < m_nodeCapacity);
+
+    // Swap node and its left-hand child
+    leftNode.left = nodeIndex;
+    leftNode.parent = node.parent;
+    node.parent = leftIndex;
+
+    // The node's old parent should now point to its left-hand child
+    if (leftNode.parent) {
+      auto& leftNodeParent = m_nodes.at(*leftNode.parent);
+      if (leftNodeParent.left == nodeIndex) {
+        leftNodeParent.left = leftIndex;
+      } else {
+        assert(leftNodeParent.right == nodeIndex);
+        leftNodeParent.right = leftIndex;
+      }
+    } else {
+      m_rootIndex = leftIndex;
+    }
+
+    // Rotate
+    const auto& rightNode = m_nodes.at(rightIndex);
+    auto& leftLeftNode = m_nodes.at(leftLeft.value());
+    auto& leftRightNode = m_nodes.at(leftRight.value());
+    if (leftLeftNode.height > leftRightNode.height) {
+      leftNode.right = leftLeft;
+      node.left = leftRight;
+
+      leftRightNode.parent = nodeIndex;
+
+      node.box = combine(rightNode.box, leftRightNode.box);
+      leftNode.box = combine(node.box, leftLeftNode.box);
+
+      node.height =
+          1 + std::max(rightNode.height.value(), leftRightNode.height.value());
+      leftNode.height =
+          1 + std::max(node.height.value(), leftLeftNode.height.value());
+    } else {
+      leftNode.right = leftRight;
+      node.left = leftLeft;
+
+      leftLeftNode.parent = nodeIndex;
+
+      node.box = combine(rightNode.box, leftLeftNode.box);
+      leftNode.box = combine(node.box, leftRightNode.box);
+
+      node.height =
+          1 + std::max(rightNode.height.value(), leftLeftNode.height.value());
+      leftNode.height =
+          1 + std::max(node.height.value(), leftRightNode.height.value());
+    }
+  }
+
+  [[nodiscard]] auto balance(const index_type nodeIndex) -> index_type
+  {
+    const auto& node = m_nodes.at(nodeIndex);
+    if (node.is_leaf() || node.height < 2) {
+      return nodeIndex;
+    }
+
+    const auto leftIndex = node.left.value();
+    const auto rightIndex = node.right.value();
+
+    assert(leftIndex < m_nodeCapacity);
+    assert(rightIndex < m_nodeCapacity);
+
+    const auto& leftNode = m_nodes.at(leftIndex);
+    const auto& rightNode = m_nodes.at(rightIndex);
+
+    const auto currentBalance =
+        rightNode.height.value() - leftNode.height.value();
+
+    // Rotate right branch up
+    if (currentBalance > 1) {
+      rotate_right(nodeIndex, leftIndex, rightIndex);
+      return rightIndex;
+    }
+
+    // Rotate left branch up
+    if (currentBalance < -1) {
+      rotate_left(nodeIndex, leftIndex, rightIndex);
+      return leftIndex;
+    }
+
+    return nodeIndex;
+  }
+
+  void fix_tree_upwards(opt_index nodeIndex)
   {
     while (nodeIndex) {
-      auto& node = m_nodes.at(nodeIndex.value());
+      nodeIndex = balance(*nodeIndex);
 
-      // every node should be a parent
-      assert(node.left);
-      assert(node.right);
+      auto& node = m_nodes.at(*nodeIndex);
+      const auto left = node.left;
+      const auto right = node.right;
 
-      // fix height and area
-      const auto& left = m_nodes.at(node.left.value());
-      const auto& right = m_nodes.at(node.right.value());
-      node.box = combine(left.box, right.box);
+      assert(left);
+      assert(right);
+
+      const auto& leftNode = m_nodes.at(left.value());
+      const auto& rightNode = m_nodes.at(right.value());
+
+      node.height =
+          1 + std::max(leftNode.height.value(), rightNode.height.value());
+      node.box = combine(leftNode.box, rightNode.box);
 
       nodeIndex = node.parent;
     }
   }
 
-  [[nodiscard]] auto find_best_insertion_position(
-      const node_type& leafNode) const -> index_type
+  [[nodiscard]] auto find_best_sibling(const aabb_type& leafAabb) const
+      -> index_type
   {
-    auto treeNodeIndex = m_rootIndex.value();
-    while (!m_nodes.at(treeNodeIndex).is_leaf()) {
-      // because of the test in the while loop above we know we are never a leaf
-      // inside it
-      const auto& treeNode = m_nodes.at(treeNodeIndex);
-      const auto leftNodeIndex = treeNode.left.value();
-      const auto rightNodeIndex = treeNode.right.value();
-      const auto& leftNode = m_nodes.at(leftNodeIndex);
-      const auto& rightNode = m_nodes.at(rightNodeIndex);
+    auto index = m_rootIndex.value();
 
-      const auto combined = combine(treeNode.box, leafNode.box);
+    while (!m_nodes.at(index).is_leaf()) {
+      auto& node = m_nodes.at(index);
+      const auto left = node.left.value();
+      const auto right = node.right.value();
 
-      const auto newParentNodeCost = 2.0f * combined.area();
-      const auto minimumPushDownCost =
-          2.0f * (combined.area() - treeNode.box.area());
+      const auto area = node.box.area();
 
-      // use the costs to figure out whether to create a new parent here or
-      // descend
+      const auto combinedAabb = combine(node.box, leafAabb);
+
+      // Cost of creating a new parent for this node and the new leaf.
+      const auto cost = 2.0 * combinedAabb.area();
+
+      // Minimum cost of pushing the leaf further down the tree.
+      const auto minimumCost = 2.0 * (combinedAabb.area() - area);
+
       const auto costLeft =
-          detail::get_left_cost(leftNode, leafNode, minimumPushDownCost);
+          detail::get_left_cost(m_nodes.at(left), node, minimumCost);
       const auto costRight =
-          detail::get_right_cost(rightNode, leafNode, minimumPushDownCost);
+          detail::get_right_cost(m_nodes.at(right), node, minimumCost);
 
-      // if the cost of creating a new parent node here is less than descending
-      // in either direction then we know we need to create a new parent node
-      // here and attach the leaf to that
-      if (newParentNodeCost < costLeft && newParentNodeCost < costRight) {
+      // Descend according to the minimum cost.
+      if ((cost < costLeft) && (cost < costRight)) {
         break;
       }
 
-      // otherwise descend in the cheapest direction
+      // Descend.
       if (costLeft < costRight) {
-        treeNodeIndex = leftNodeIndex;
+        index = left;
       } else {
-        treeNodeIndex = rightNodeIndex;
+        index = right;
       }
     }
 
-    return treeNodeIndex;
+    return index;
   }
 
-  void insert_leaf(index_type leafIndex)
+  void insert_leaf(const index_type leafIndex)
   {
-    // make sure we're inserting a new leaf
-    assert(!m_nodes.at(leafIndex).parent);
-    assert(!m_nodes.at(leafIndex).left);
-    assert(!m_nodes.at(leafIndex).right);
+    // Ensure that we're inserting a new leaf
+    //    assert(!m_nodes.at(leafIndex).parent);
+    //    assert(!m_nodes.at(leafIndex).left);
+    //    assert(!m_nodes.at(leafIndex).right);
 
-    // if the tree is empty then we make the root the leaf
     if (!m_rootIndex) {
+      // Tree was empty -> make the leaf the new root
       m_rootIndex = leafIndex;
+      m_nodes.at(m_rootIndex.value()).parent = std::nullopt;
       return;
     }
 
-    // search for the best place to put the new leaf in the tree
-    // we use surface area and depth as search heuristics
     auto& leafNode = m_nodes.at(leafIndex);
-    const auto foundIndex = find_best_insertion_position(leafNode);
+    const auto& leafAabb = leafNode.box;
+    const auto siblingIndex = find_best_sibling(leafAabb);
+    auto& sibling = m_nodes.at(siblingIndex);
 
-    // the leafs sibling is going to be the node we found above and we are going
-    // to create a new parent node and attach the leaf and this item
-    const auto leafSiblingIndex = foundIndex;
-    auto& leafSibling = m_nodes.at(leafSiblingIndex);
-
-    const auto oldParentIndex = leafSibling.parent;
+    // Create a new parent
+    const auto oldParentIndex = sibling.parent;
     const auto newParentIndex = allocate_node();
-
     auto& newParent = m_nodes.at(newParentIndex);
     newParent.parent = oldParentIndex;
-    // the new parents aabb is the leaf aabb combined with it's siblings aabb
-    newParent.box = combine(leafNode.box, leafSibling.box);
-    newParent.left = leafSiblingIndex;
-    newParent.right = leafIndex;
-    leafNode.parent = newParentIndex;
-    leafSibling.parent = newParentIndex;
+    newParent.box = combine(leafAabb, sibling.box);
+    newParent.height = sibling.height.value() + 1;  // TODO maybe value_or(0)
 
-    if (!oldParentIndex) {
-      // the old parent was the root and so this is now the root
-      m_rootIndex = newParentIndex;
-    } else {
-      // the old parent was not the root and so we need to patch the left or
-      // right index to point to the new node
+    if (oldParentIndex) {
+      // The sibling was not the root
       auto& oldParent = m_nodes.at(oldParentIndex.value());
-      if (oldParent.left == leafSiblingIndex) {
+      if (oldParent.left == siblingIndex) {
         oldParent.left = newParentIndex;
       } else {
         oldParent.right = newParentIndex;
       }
-    }
-
-    // finally we need to walk back up the tree fixing heights and areas
-    fix_upwards_tree(leafNode.parent.value());
-  }
-
-  void remove_leaf(index_type leafIndex)
-  {
-    // if the leaf is the root then we can just clear the root pointer and
-    // return
-    if (leafIndex == m_rootIndex) {
-      m_rootIndex.reset();
-      return;
-    }
-
-    auto& leafNode = m_nodes.at(leafIndex);
-
-    const auto parentNodeIndex = leafNode.parent.value();
-    const auto& parentNode = m_nodes.at(parentNodeIndex);
-
-    const auto grandParentNodeIndex = parentNode.parent;
-
-    const auto siblingNodeIndex =
-        parentNode.left == leafIndex ? parentNode.right : parentNode.left;
-    assert(siblingNodeIndex.has_value());  // we must have a sibling
-    auto& siblingNode = m_nodes.at(*siblingNodeIndex);
-
-    if (grandParentNodeIndex.has_value()) {
-      // if we have a grand parent (i.e. the parent is not the root) then
-      // destroy the parent and connect the sibling to the grandparent in its
-      // place
-      auto& grandParentNode = m_nodes.at(*grandParentNodeIndex);
-      if (grandParentNode.left == parentNodeIndex) {
-        grandParentNode.left = siblingNodeIndex;
-      } else {
-        grandParentNode.right = siblingNodeIndex;
-      }
-      siblingNode.parent = grandParentNodeIndex;
-      deallocate_node(parentNodeIndex);
-      fix_upwards_tree(grandParentNodeIndex);
     } else {
-      // if we have no grandparent then the parent is the root and so our
-      // sibling becomes the root and has it's parent removed
-      m_rootIndex = siblingNodeIndex;
-      siblingNode.parent.reset();
-      deallocate_node(parentNodeIndex);
+      // The sibling was the root
+      m_rootIndex = newParentIndex;
     }
 
-    leafNode.parent.reset();
+    newParent.left = siblingIndex;
+    newParent.right = leafIndex;
+
+    sibling.parent = newParentIndex;
+    leafNode.parent = newParentIndex;
+
+    // Walk up the tree and repair it
+    fix_tree_upwards(leafNode.parent);
   }
 
-  void update_leaf(index_type leafIndex, const aabb_type& box)
+  void adjust_ancestor(opt_index index)
   {
-    auto& node = m_nodes.at(leafIndex);
+    while (index) {
+      index = balance(*index);
 
-    // if the node contains the new aabb then we just leave things
-    if (node.box.contains(box)) {
+      auto& node = m_nodes.at(*index);
+
+      const auto left = node.left;
+      const auto right = node.right;
+
+      const auto& leftNode = m_nodes.at(left.value());
+      const auto& rightNode = m_nodes.at(right.value());
+
+      node.box = combine(leftNode.box, rightNode.box);
+      node.height =
+          1 + std::max(leftNode.height.value(), rightNode.height.value());
+
+      index = node.parent;
+    }
+  }
+
+  void remove_leaf(const index_type leafIndex)
+  {
+    if (leafIndex == m_rootIndex) {
+      m_rootIndex = std::nullopt;
       return;
     }
 
-    remove_leaf(leafIndex);
-    node.box = box;
-    insert_leaf(leafIndex);
+    const auto parentIndex = m_nodes.at(leafIndex).parent.value();
+    const auto& parentNode = m_nodes.at(parentIndex);
+    const auto grandParentIndex = parentNode.parent;
+
+    const auto sibling =
+        (parentNode.left == leafIndex) ? parentNode.right : parentNode.left;
+
+    // Destroy the parent and connect the sibling to the grandparent
+    if (grandParentIndex) {
+      auto& grandParent = m_nodes.at(*grandParentIndex);
+      if (grandParent.left == parentIndex) {
+        grandParent.left = sibling;
+      } else {
+        grandParent.right = sibling;
+      }
+
+      m_nodes.at(sibling.value()).parent = grandParentIndex;
+      free_node(parentIndex);
+
+      // Adjust ancestor bounds.
+      adjust_ancestor(grandParentIndex);
+    } else {
+      m_rootIndex = sibling;
+      m_nodes.at(sibling.value()).parent = std::nullopt;
+      free_node(parentIndex);
+    }
   }
 };
 

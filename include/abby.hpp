@@ -689,30 +689,6 @@ class tree final  // TODO revamp: relocate, query,
     }
   }
 
-        if (!nodeIndex) {
-          continue;
-        }
-
-        const auto& node = m_nodes.at(*nodeIndex);
-        const auto copy = node.box;
-
-        // Test for overlap between the AABBs
-        if (node.box.overlaps(copy)) {
-          // Check that we're at a leaf node
-          if (node.is_leaf()) {
-            // Can't interact with itself
-            if (node.id != key) {
-              callable(node.id);
-            }
-          } else {
-            stack.push(node.left);
-            stack.push(node.right);
-          }
-        }
-      }
-    }
-  }
-
   void set_fattening_factor(std::optional<double> factor) noexcept
   {
     m_thicknessFactor = factor;

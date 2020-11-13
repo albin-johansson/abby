@@ -624,8 +624,6 @@ class tree final  // TODO revamp: relocate, query,
     }
   }
 
-  void query_collisions(const key_type&, std::nullptr_t) const = delete;
-
   /**
    * \brief Obtains collision candidates for the AABB associated with the
    * specified ID.

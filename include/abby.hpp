@@ -407,7 +407,7 @@ namespace detail {
 template <typename T, typename U>
 [[nodiscard]] constexpr auto get_left_cost(const aabb_node<T, U>& left,
                                            const aabb_node<T, U>& leaf,
-                                           const float minimumCost) -> float
+                                           const double minimumCost) -> double
 {
   if (left.is_leaf()) {
     return combine(leaf.box, left.box).area() + minimumCost;
@@ -420,7 +420,7 @@ template <typename T, typename U>
 template <typename T, typename U>
 [[nodiscard]] constexpr auto get_right_cost(const aabb_node<T, U>& right,
                                             const aabb_node<T, U>& leaf,
-                                            const float minimumCost) -> float
+                                            const double minimumCost) -> double
 {
   if (right.is_leaf()) {
     return combine(leaf.box, right.box).area() + minimumCost;
@@ -764,10 +764,12 @@ class tree final  // TODO revamp: relocate, query,
     for (auto index = m_nodeCount; index < (m_nodeCapacity - 1); ++index) {
       auto& node = m_nodes.at(index);
       node.next = static_cast<index_type>(index + 1);
-      // node.height = std::nullopt;
+      node.height = std::nullopt;
     }
 
-    m_nodes.at(m_nodeCapacity - 1).next = std::nullopt;
+    auto& node = m_nodes.at(m_nodeCapacity - 1);
+    node.next = std::nullopt;
+    node.height = std::nullopt;
 
     // Update the index of the next free node
     m_nextFreeNodeIndex = static_cast<index_type>(m_nodeCount);
@@ -793,6 +795,9 @@ class tree final  // TODO revamp: relocate, query,
 
     const auto index = m_nextFreeNodeIndex.value();  // Index of new node
     auto& node = m_nodes.at(index);
+    node.parent = std::nullopt;
+    node.left = std::nullopt;
+    node.right = std::nullopt;
     node.height = 0;
 
     m_nextFreeNodeIndex = node.next;
@@ -803,8 +808,16 @@ class tree final  // TODO revamp: relocate, query,
 
   void free_node(index_type nodeIndex)
   {
+    assert(nodeIndex < m_nodeCapacity);
+    assert(m_nodeCount > 0);
+
     auto& node = m_nodes.at(nodeIndex);
     node.next = m_nextFreeNodeIndex;
+    node.height = std::nullopt;
+    node.right = std::nullopt;
+    node.left = std::nullopt;
+    node.parent = std::nullopt;
+
     m_nextFreeNodeIndex = nodeIndex;
     --m_nodeCount;
   }
@@ -998,6 +1011,7 @@ class tree final  // TODO revamp: relocate, query,
   {
     auto index = m_rootIndex.value();
 
+    // FIXME something causes this loop to never end at times
     while (!m_nodes.at(index).is_leaf()) {
       auto& node = m_nodes.at(index);
       const auto left = node.left.value();
@@ -1006,12 +1020,13 @@ class tree final  // TODO revamp: relocate, query,
       const auto area = node.box.area();
 
       const auto combinedAabb = combine(node.box, leafAabb);
+      const auto combinedArea = combinedAabb.area();
 
       // Cost of creating a new parent for this node and the new leaf.
-      const auto cost = 2.0 * combinedAabb.area();
+      const auto cost = 2.0 * combinedArea;
 
       // Minimum cost of pushing the leaf further down the tree.
-      const auto minimumCost = 2.0 * (combinedAabb.area() - area);
+      const auto minimumCost = 2.0 * (combinedArea - area);
 
       const auto costLeft =
           detail::get_left_cost(m_nodes.at(left), node, minimumCost);
@@ -1036,11 +1051,6 @@ class tree final  // TODO revamp: relocate, query,
 
   void insert_leaf(const index_type leafIndex)
   {
-    // Ensure that we're inserting a new leaf
-    //    assert(!m_nodes.at(leafIndex).parent);
-    //    assert(!m_nodes.at(leafIndex).left);
-    //    assert(!m_nodes.at(leafIndex).right);
-
     if (!m_rootIndex) {
       // Tree was empty -> make the leaf the new root
       m_rootIndex = leafIndex;

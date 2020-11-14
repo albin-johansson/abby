@@ -269,9 +269,8 @@ struct aabb final
    */
   [[nodiscard]] constexpr auto area() const noexcept -> T
   {
-    const auto width = max.x - min.x;
-    const auto height = max.y - min.y;
-    return width * height;
+    const auto size = max - min;
+    return size.x * size.y;
   }
 
   [[nodiscard]] constexpr auto center() const noexcept -> vec2<T>

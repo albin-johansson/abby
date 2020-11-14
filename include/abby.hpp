@@ -512,6 +512,7 @@ class tree final  // TODO revamp: relocate, query,
   void insert(const key_type& key, const aabb_type& box)
   {
     assert(!m_indexMap.count(key));  // Can't have same key multiple times!
+    assert(box.area() > 0);
 
     const auto index = allocate_node();
 

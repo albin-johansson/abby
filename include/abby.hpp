@@ -815,7 +815,7 @@ class tree final  // TODO revamp: relocate, query,
     return index;
   }
 
-  void free_node(index_type nodeIndex)
+  void free_node(const index_type nodeIndex)
   {
     assert(nodeIndex < m_nodeCapacity);
     assert(m_nodeCount > 0);

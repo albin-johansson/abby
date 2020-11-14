@@ -375,7 +375,7 @@ template <typename T>
 template <typename T, typename U = float>
 struct aabb_node final
 {
-  T id;
+  T id;  // TODO make optional<T>, "glue" nodes don't have an ID
   aabb<U> box;
   std::optional<int> parent;
   std::optional<int> left;

@@ -209,4 +209,16 @@ TEST_SUITE("tree")
     tree.erase(123);
     CHECK(tree.is_empty());
   }
+
+  TEST_CASE("tree with many AABBs") {
+    abby::tree<int> tree;
+
+    tree.emplace(1, {182, 831}, {234, 939});
+    tree.emplace(2, {3845, 31}, {56, 23});
+    tree.emplace(3, {6752, 3411}, {765, 254});
+    tree.emplace(4, {675, 883}, {231, 87});
+//    tree.emplace(5, {468, 1234}, {4571, 2342});
+//    tree.emplace(6, {12315, 1234}, {44571, 44});
+
+  }
 }

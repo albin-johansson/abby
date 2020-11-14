@@ -493,6 +493,10 @@ class tree final  // TODO revamp: relocate, query,
     auto& node = m_nodes.at(m_nodeCapacity - 1);
     node.next = std::nullopt;
     node.height = std::nullopt;
+
+#ifndef NDEBUG
+    validate();
+#endif
   }
 
   /**
@@ -520,6 +524,10 @@ class tree final  // TODO revamp: relocate, query,
     insert_leaf(index);
 
     m_indexMap.emplace(key, index);
+
+#ifndef NDEBUG
+    validate();
+#endif
   }
 
   /**
@@ -565,6 +573,10 @@ class tree final  // TODO revamp: relocate, query,
       remove_leaf(index);
       free_node(index);
     }
+
+#ifndef NDEBUG
+    validate();
+#endif
   }
 
   /**
@@ -593,6 +605,9 @@ class tree final  // TODO revamp: relocate, query,
 
       // No need to update if the particle is still within its fattened AABB.
       if (!forceReinsert && m_nodes.at(nodeIndex).box.contains(box)) {
+#ifndef NDEBUG
+        validate();
+#endif
         return;
       }
 
@@ -606,6 +621,10 @@ class tree final  // TODO revamp: relocate, query,
 
       insert_leaf(nodeIndex);
     }
+
+#ifndef NDEBUG
+    validate();
+#endif
   }
 
   /**
@@ -631,6 +650,10 @@ class tree final  // TODO revamp: relocate, query,
 
       replace(key, box);
     }
+
+#ifndef NDEBUG
+    validate();
+#endif
   }
 
   /**
@@ -1020,7 +1043,6 @@ class tree final  // TODO revamp: relocate, query,
   {
     auto index = m_rootIndex.value();
 
-    // FIXME something causes this loop to never end at times
     while (!m_nodes.at(index).is_leaf()) {
       auto& node = m_nodes.at(index);
       const auto left = node.left.value();
@@ -1063,7 +1085,7 @@ class tree final  // TODO revamp: relocate, query,
 
   void insert_leaf(const index_type leafIndex)
   {
-    if (!m_rootIndex) {
+    if (m_rootIndex == std::nullopt) {
       // Tree was empty -> make the leaf the new root
       m_rootIndex = leafIndex;
       m_nodes.at(m_rootIndex.value()).parent = std::nullopt;
@@ -1160,6 +1182,96 @@ class tree final  // TODO revamp: relocate, query,
       m_nodes.at(sibling.value()).parent = std::nullopt;
       free_node(parentIndex);
     }
+  void validate_structure(opt_index index) const
+  {
+    if (!index) {
+      return;
+    }
+
+    if (index == m_rootIndex) {
+      assert(m_nodes.at(*index).parent == std::nullopt);
+    }
+
+    const auto& node = m_nodes.at(*index);
+    const auto left = node.left;
+    const auto right = node.right;
+
+    if (node.is_leaf()) {
+      assert(left == std::nullopt);
+      assert(right == std::nullopt);
+      assert(node.height == 0);
+    } else {
+      assert(left < m_nodeCapacity);
+      assert(right < m_nodeCapacity);
+      assert(left != std::nullopt);
+      assert(right != std::nullopt);
+
+      const auto& leftNode = m_nodes.at(*left);
+      const auto& rightNode = m_nodes.at(*right);
+
+      assert(leftNode.parent == index);
+      assert(rightNode.parent == index);
+
+      validate_structure(left);
+      validate_structure(right);
+    }
+  }
+
+  void validate_metrics(opt_index index) const
+  {
+    if (!index) {
+      return;
+    }
+
+    const auto& node = m_nodes.at(*index);
+    const auto left = node.left;
+    const auto right = node.right;
+
+    if (node.is_leaf()) {
+      assert(!left);
+      assert(!right);
+      assert(node.height == 0);
+      return;
+    } else {
+      assert(left < m_nodeCapacity);
+      assert(right < m_nodeCapacity);
+      assert(left);
+      assert(right);
+
+      const auto& leftNode = m_nodes.at(*left);
+      const auto& rightNode = m_nodes.at(*right);
+
+      const auto height =
+          1 + std::max(leftNode.height.value(), rightNode.height.value());
+      assert(node.height == height);
+
+      const auto aabb = combine(leftNode.box, rightNode.box);
+      assert(aabb.min.x == node.box.min.x);
+      assert(aabb.min.y == node.box.min.y);
+      assert(aabb.max.x == node.box.max.x);
+      assert(aabb.max.y == node.box.max.y);
+
+      validate_metrics(left);
+      validate_metrics(right);
+    }
+  }
+
+  void validate()
+  {
+    validate_structure(m_rootIndex);
+    validate_metrics(m_rootIndex);
+
+    auto freeCount = 0;
+    auto freeIndex = m_nextFreeNodeIndex;
+
+    while (freeIndex) {
+      assert(freeIndex < m_nodeCapacity);
+      freeIndex = m_nodes.at(*freeIndex).next;
+      ++freeCount;
+    }
+
+    //    assert(height() == computeHeight());
+    assert((m_nodeCount + freeCount) == m_nodeCapacity);
   }
 };
 

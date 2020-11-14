@@ -483,16 +483,7 @@ class tree final  // TODO revamp: relocate, query,
     assert(m_nodeCount == 0);
     assert(m_nodeCapacity > 0);
 
-    m_nodes.resize(m_nodeCapacity);
-    for (auto i = 0; i < (m_nodeCapacity - 1); ++i) {
-      auto& node = m_nodes.at(i);
-      node.next = static_cast<index_type>(i + 1);
-      node.height = std::nullopt;
-    }
-
-    auto& node = m_nodes.at(m_nodeCapacity - 1);
-    node.next = std::nullopt;
-    node.height = std::nullopt;
+    resize_to_match_node_capacity(0);
 
 #ifndef NDEBUG
     validate();
@@ -783,6 +774,29 @@ class tree final  // TODO revamp: relocate, query,
   std::optional<double> m_thicknessFactor{0.05};
 
   /**
+   * \brief Resizes the node vector.
+   *
+   * \param beginInitIndex the index at which the function will start to
+   * initialize the `next` and `height` members of the new nodes.
+   * \param size the new size of the node vector.
+   *
+   * \since 0.2.0
+   */
+  void resize_to_match_node_capacity(const size_type beginInitIndex)
+  {
+    m_nodes.resize(m_nodeCapacity);
+    for (auto i = beginInitIndex; i < (m_nodeCapacity - 1); ++i) {
+      auto& node = m_nodes.at(i);
+      node.next = static_cast<index_type>(i + 1);
+      node.height = std::nullopt;
+    }
+
+    auto& node = m_nodes.at(m_nodeCapacity - 1);
+    node.next = std::nullopt;
+    node.height = std::nullopt;
+  }
+
+  /**
    * \brief Doubles the size of the node pool.
    *
    * \since 0.1.0
@@ -791,14 +805,9 @@ class tree final  // TODO revamp: relocate, query,
   {
     assert(m_nodeCount == m_nodeCapacity);
 
-    m_nodeCapacity *= 2;  // We need more free nodes -> increase pool size
-    m_nodes.resize(m_nodeCapacity);
-
-    for (auto index = m_nodeCount; index < (m_nodeCapacity - 1); ++index) {
-      auto& node = m_nodes.at(index);
-      node.next = static_cast<index_type>(index + 1);
-      node.height = std::nullopt;
-    }
+    // We need more free nodes -> increase pool size
+    m_nodeCapacity *= 2;
+    resize_to_match_node_capacity(m_nodeCount);
 
     auto& node = m_nodes.at(m_nodeCapacity - 1);
     node.next = std::nullopt;

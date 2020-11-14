@@ -192,6 +192,23 @@ struct aabb final
   vec2<T> min;  ///< The top-left corner of the AABB.
   vec2<T> max;  ///< The bottom-right corner of the AABB.
 
+  constexpr void fatten(std::optional<double> factor) noexcept
+  {
+    if (!factor) {
+      return;
+    }
+
+    const auto size = max - min;
+    const auto dx = *factor * size.x;
+    const auto dy = *factor * size.y;
+
+    min.x -= dx;
+    min.y -= dy;
+
+    max.x += dx;
+    max.y += dy;
+  }
+
   /**
    * \brief Indicates whether or not the supplied AABB is contained within the
    * invoked AABB.
@@ -434,21 +451,6 @@ template <typename T, typename U>
 
 /// \endcond
 
-template <typename T>
-constexpr void fatten(aabb<T>& aabb, std::optional<double> factor) noexcept
-{
-  if (!factor) {
-    return;
-  }
-
-  const auto size = aabb.max - aabb.min;
-
-  aabb.min.x -= (*factor * size.x);
-  aabb.min.y -= (*factor * size.y);
-  aabb.max.x += (*factor * size.x);
-  aabb.max.y += (*factor * size.y);
-}
-
 /**
  * \class tree
  *
@@ -477,11 +479,12 @@ class tree final  // TODO revamp: relocate, query,
   using node_type = aabb_node<key_type, T>;
   using index_type = int;
 
-  tree()
+  explicit tree(size_type size = 24) : m_nodeCapacity{size}
   {
     assert(!m_rootIndex);
     assert(m_nodeCount == 0);
     assert(m_nodeCapacity > 0);
+    assert(m_nextFreeNodeIndex == 0);
 
     resize_to_match_node_capacity(0);
 
@@ -505,17 +508,16 @@ class tree final  // TODO revamp: relocate, query,
     assert(!m_indexMap.count(key));  // Can't have same key multiple times!
     assert(box.area() > 0);
 
-    const auto index = allocate_node();
+    const auto nodeIndex = allocate_node();
 
-    auto& node = m_nodes.at(index);
-    node.box = box;
+    auto& node = m_nodes.at(nodeIndex);
     node.id = key;
+    node.box = box;
+    node.box.fatten(m_thicknessFactor);
     node.height = 0;
 
-    fatten(node.box, m_thicknessFactor);
-    insert_leaf(index);
-
-    m_indexMap.emplace(key, index);
+    insert_leaf(nodeIndex);
+    m_indexMap.emplace(key, nodeIndex);
 
 #ifndef NDEBUG
     validate();
@@ -608,7 +610,7 @@ class tree final  // TODO revamp: relocate, query,
       // Remove current leaf
       remove_leaf(nodeIndex);
 
-      fatten(copy, m_thicknessFactor);
+      copy.fatten(m_thicknessFactor);
       m_nodes.at(nodeIndex).box = copy;
 
       insert_leaf(nodeIndex);
@@ -769,7 +771,7 @@ class tree final  // TODO revamp: relocate, query,
   opt_index m_nextFreeNodeIndex{0};
 
   size_type m_nodeCount{0};
-  size_type m_nodeCapacity{24};
+  size_type m_nodeCapacity;
 
   std::optional<double> m_thicknessFactor{0.05};
 

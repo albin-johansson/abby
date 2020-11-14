@@ -953,6 +953,7 @@ class tree final  // TODO revamp: relocate, query,
       node.right = rightLeft;
 
       rightLeftNode.parent = nodeIndex;
+
       node.box = combine(leftNode.box, rightLeftNode.box);
       rightNode.box = combine(node.box, rightRightNode.box);
 

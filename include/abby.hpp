@@ -596,10 +596,11 @@ class tree final  // TODO revamp: relocate, query,
         return;
       }
 
+      auto copy = box;
+
       // Remove current leaf
       remove_leaf(nodeIndex);
 
-      auto copy = box;
       fatten(copy, m_thicknessFactor);
       m_nodes.at(nodeIndex).box = copy;
 

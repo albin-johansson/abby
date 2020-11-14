@@ -76,7 +76,7 @@ struct vec2 final
  * \since 0.1.0
  */
 template <typename T>
-using point = vec2<T>;
+using point [[deprecated]] = vec2<T>;
 
 /**
  * \typedef size
@@ -86,7 +86,7 @@ using point = vec2<T>;
  * \since 0.1.0
  */
 template <typename T>
-using size = vec2<T>;
+using size [[deprecated]] = vec2<T>;
 
 // clang-format off
 template <typename T> vec2(T, T) -> vec2<T>;

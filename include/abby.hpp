@@ -375,7 +375,7 @@ template <typename T>
 template <typename T, typename U = float>
 struct aabb_node final
 {
-  T id;  // TODO make optional<T>, "glue" nodes don't have an ID
+  std::optional<T> id;
   aabb<U> box;
   std::optional<int> parent;
   std::optional<int> left;
@@ -704,10 +704,10 @@ class tree final  // TODO revamp: relocate, query,
         // Test for overlap between the AABBs
         if (node.box.overlaps(copy)) {
           // Check that we're at a leaf node
-          if (node.is_leaf()) {
+          if (node.is_leaf() && node.id) {
             // Can't interact with itself
             if (node.id != key) {
-              *iterator = node.id;
+              *iterator = *node.id;
               ++iterator;
             }
           } else {
@@ -846,6 +846,8 @@ class tree final  // TODO revamp: relocate, query,
     auto& node = m_nodes.at(nodeIndex);
     node.next = m_nextFreeNodeIndex;
     node.height = std::nullopt;
+
+    node.id = std::nullopt;
     node.right = std::nullopt;
     node.left = std::nullopt;
     node.parent = std::nullopt;

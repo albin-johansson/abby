@@ -39,10 +39,10 @@
 #include <cassert>          // assert
 #include <cstddef>          // byte
 #include <deque>            // deque
-#include <map>              // map
 #include <memory_resource>  // monotonic_buffer_resource
 #include <optional>         // optional
 #include <stack>            // stack
+#include <unordered_map>    // unordered_map
 #include <vector>           // vector
 
 namespace abby {
@@ -770,7 +770,7 @@ class tree final  // TODO revamp: relocate, query,
  private:
   using opt_index = std::optional<index_type>;
 
-  std::map<key_type, index_type> m_indexMap;
+  std::unordered_map<key_type, index_type> m_indexMap;
   std::vector<node_type> m_nodes;
 
   opt_index m_rootIndex;

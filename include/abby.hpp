@@ -868,7 +868,7 @@ class tree final  // TODO revamp: relocate, query,
     assert(rightRight < m_nodeCapacity);
 
     // Swap node and its right-hand child
-    rightNode.left = rightIndex;
+    rightNode.left = nodeIndex;
     rightNode.parent = node.parent;
     node.parent = rightIndex;
 

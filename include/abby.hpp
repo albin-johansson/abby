@@ -828,12 +828,14 @@ class tree final  // TODO revamp: relocate, query,
 
     const auto index = m_nextFreeNodeIndex.value();  // Index of new node
     auto& node = m_nodes.at(index);
+
+    m_nextFreeNodeIndex = node.next;
+
     node.parent = std::nullopt;
     node.left = std::nullopt;
     node.right = std::nullopt;
     node.height = 0;
 
-    m_nextFreeNodeIndex = node.next;
     ++m_nodeCount;
 
     return index;

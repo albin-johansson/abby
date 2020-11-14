@@ -1130,13 +1130,12 @@ class tree final  // TODO revamp: relocate, query,
     fix_tree_upwards(leafNode.parent);
   }
 
-  void adjust_ancestor(opt_index index)
+  void adjust_ancestor_bounds(opt_index index)
   {
     while (index) {
       index = balance(*index);
 
       auto& node = m_nodes.at(*index);
-
       const auto left = node.left;
       const auto right = node.right;
 
@@ -1176,16 +1175,14 @@ class tree final  // TODO revamp: relocate, query,
 
       m_nodes.at(sibling.value()).parent = grandParentIndex;
       free_node(parentIndex);
-
-      // Adjust ancestor bounds.
-      adjust_ancestor(grandParentIndex);
+      adjust_ancestor_bounds(grandParentIndex);
     } else {
       m_rootIndex = sibling;
       m_nodes.at(sibling.value()).parent = std::nullopt;
       free_node(parentIndex);
     }
   }
-  
+
   void validate_structure(opt_index index) const
   {
     if (!index) {

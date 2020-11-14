@@ -400,8 +400,8 @@ struct aabb_node final
   std::optional<int> right;
   std::optional<int> next;
 
-  // Height of the node: 0 for leaves and `std::nullopt` for free nodes.
-  std::optional<int> height;
+  // Height of the node: 0 for leaves and -1 for free nodes.
+  int height{-1};
 
   /**
    * \brief Indicates whether or not the node is a leaf node.
@@ -824,12 +824,12 @@ class tree final  // TODO revamp: relocate, query,
     for (auto i = beginInitIndex; i < (m_nodeCapacity - 1); ++i) {
       auto& node = m_nodes.at(i);
       node.next = static_cast<index_type>(i + 1);
-      node.height = std::nullopt;
+      node.height = -1;
     }
 
     auto& node = m_nodes.at(m_nodeCapacity - 1);
     node.next = std::nullopt;
-    node.height = std::nullopt;
+    node.height = -1;
   }
 
   /**
@@ -889,7 +889,7 @@ class tree final  // TODO revamp: relocate, query,
 
     auto& node = m_nodes.at(nodeIndex);
     node.next = m_nextFreeNodeIndex;
-    node.height = std::nullopt;
+    node.height = -1;
 
     node.id = std::nullopt;
     node.right = std::nullopt;
@@ -904,7 +904,6 @@ class tree final  // TODO revamp: relocate, query,
                     const index_type leftIndex,
                     const index_type rightIndex)
   {
-    auto& node = m_nodes.at(nodeIndex);
     auto& rightNode = m_nodes.at(rightIndex);
 
     const auto rightLeft = rightNode.left;
@@ -912,6 +911,8 @@ class tree final  // TODO revamp: relocate, query,
 
     assert(rightLeft < m_nodeCapacity);
     assert(rightRight < m_nodeCapacity);
+
+    auto& node = m_nodes.at(nodeIndex);
 
     // Swap node and its right-hand child
     rightNode.left = nodeIndex;
@@ -945,10 +946,8 @@ class tree final  // TODO revamp: relocate, query,
       node.box = combine(leftNode.box, rightRightNode.box);
       rightNode.box = combine(node.box, rightLeftNode.box);
 
-      node.height =
-          1 + std::max(leftNode.height.value(), rightRightNode.height.value());
-      rightNode.height =
-          1 + std::max(node.height.value(), rightLeftNode.height.value());
+      node.height = 1 + std::max(leftNode.height, rightRightNode.height);
+      rightNode.height = 1 + std::max(node.height, rightLeftNode.height);
     } else {
       rightNode.right = rightRight;
       node.right = rightLeft;
@@ -957,10 +956,8 @@ class tree final  // TODO revamp: relocate, query,
       node.box = combine(leftNode.box, rightLeftNode.box);
       rightNode.box = combine(node.box, rightRightNode.box);
 
-      node.height =
-          1 + std::max(leftNode.height.value(), rightLeftNode.height.value());
-      rightNode.height =
-          1 + std::max(node.height.value(), rightRightNode.height.value());
+      node.height = 1 + std::max(leftNode.height, rightLeftNode.height);
+      rightNode.height = 1 + std::max(node.height, rightRightNode.height);
     }
   }
 
@@ -968,7 +965,6 @@ class tree final  // TODO revamp: relocate, query,
                    const index_type leftIndex,
                    const index_type rightIndex)
   {
-    auto& node = m_nodes.at(nodeIndex);
     auto& leftNode = m_nodes.at(leftIndex);
     const auto leftLeft = leftNode.left;
     const auto leftRight = leftNode.right;
@@ -977,6 +973,7 @@ class tree final  // TODO revamp: relocate, query,
     assert(leftRight < m_nodeCapacity);
 
     // Swap node and its left-hand child
+    auto& node = m_nodes.at(nodeIndex);
     leftNode.left = nodeIndex;
     leftNode.parent = node.parent;
     node.parent = leftIndex;
@@ -1007,10 +1004,8 @@ class tree final  // TODO revamp: relocate, query,
       node.box = combine(rightNode.box, leftRightNode.box);
       leftNode.box = combine(node.box, leftLeftNode.box);
 
-      node.height =
-          1 + std::max(rightNode.height.value(), leftRightNode.height.value());
-      leftNode.height =
-          1 + std::max(node.height.value(), leftLeftNode.height.value());
+      node.height = 1 + std::max(rightNode.height, leftRightNode.height);
+      leftNode.height = 1 + std::max(node.height, leftLeftNode.height);
     } else {
       leftNode.right = leftRight;
       node.left = leftLeft;
@@ -1020,10 +1015,8 @@ class tree final  // TODO revamp: relocate, query,
       node.box = combine(rightNode.box, leftLeftNode.box);
       leftNode.box = combine(node.box, leftRightNode.box);
 
-      node.height =
-          1 + std::max(rightNode.height.value(), leftLeftNode.height.value());
-      leftNode.height =
-          1 + std::max(node.height.value(), leftRightNode.height.value());
+      node.height = 1 + std::max(rightNode.height, leftLeftNode.height);
+      leftNode.height = 1 + std::max(node.height, leftRightNode.height);
     }
   }
 
@@ -1043,8 +1036,7 @@ class tree final  // TODO revamp: relocate, query,
     const auto& leftNode = m_nodes.at(leftIndex);
     const auto& rightNode = m_nodes.at(rightIndex);
 
-    const auto currentBalance =
-        rightNode.height.value() - leftNode.height.value();
+    const auto currentBalance = rightNode.height - leftNode.height;
 
     // Rotate right branch up
     if (currentBalance > 1) {
@@ -1076,8 +1068,7 @@ class tree final  // TODO revamp: relocate, query,
       const auto& leftNode = m_nodes.at(left.value());
       const auto& rightNode = m_nodes.at(right.value());
 
-      node.height =
-          1 + std::max(leftNode.height.value(), rightNode.height.value());
+      node.height = 1 + std::max(leftNode.height, rightNode.height);
       node.box = combine(leftNode.box, rightNode.box);
 
       nodeIndex = node.parent;
@@ -1147,7 +1138,7 @@ class tree final  // TODO revamp: relocate, query,
     auto& newParent = m_nodes.at(newParentIndex);
     newParent.parent = oldParentIndex;
     newParent.box = combine(leafAabb, sibling.box);
-    newParent.height = sibling.height.value() + 1;
+    newParent.height = sibling.height + 1;
 
     if (oldParentIndex != std::nullopt) {
       // The sibling was not the root
@@ -1185,8 +1176,7 @@ class tree final  // TODO revamp: relocate, query,
       const auto& rightNode = m_nodes.at(right.value());
 
       node.box = combine(leftNode.box, rightNode.box);
-      node.height =
-          1 + std::max(leftNode.height.value(), rightNode.height.value());
+      node.height = 1 + std::max(leftNode.height, rightNode.height);
 
       index = node.parent;
     }
@@ -1284,8 +1274,7 @@ class tree final  // TODO revamp: relocate, query,
       const auto& leftNode = m_nodes.at(*left);
       const auto& rightNode = m_nodes.at(*right);
 
-      const auto height =
-          1 + std::max(leftNode.height.value(), rightNode.height.value());
+      const auto height = 1 + std::max(leftNode.height, rightNode.height);
       assert(node.height == height);
 
       const auto aabb = combine(leftNode.box, rightNode.box);

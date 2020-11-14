@@ -1182,6 +1182,8 @@ class tree final  // TODO revamp: relocate, query,
       m_nodes.at(sibling.value()).parent = std::nullopt;
       free_node(parentIndex);
     }
+  }
+  
   void validate_structure(opt_index index) const
   {
     if (!index) {

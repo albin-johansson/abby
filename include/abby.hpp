@@ -1091,7 +1091,7 @@ class tree final  // TODO revamp: relocate, query,
     if (m_rootIndex == std::nullopt) {
       // Tree was empty -> make the leaf the new root
       m_rootIndex = leafIndex;
-      m_nodes.at(m_rootIndex.value()).parent = std::nullopt;
+      m_nodes.at(*m_rootIndex).parent = std::nullopt;
       return;
     }
 

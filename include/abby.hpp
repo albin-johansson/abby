@@ -484,11 +484,15 @@ class tree final  // TODO revamp: relocate, query,
     assert(m_nodeCapacity > 0);
 
     m_nodes.resize(m_nodeCapacity);
-    for (auto i = 0; i < m_nodeCapacity; ++i) {
+    for (auto i = 0; i < (m_nodeCapacity - 1); ++i) {
       auto& node = m_nodes.at(i);
-      node.next = i + 1;
+      node.next = static_cast<index_type>(i + 1);
       node.height = std::nullopt;
     }
+
+    auto& node = m_nodes.at(m_nodeCapacity - 1);
+    node.next = std::nullopt;
+    node.height = std::nullopt;
   }
 
   /**

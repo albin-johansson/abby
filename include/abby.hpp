@@ -1083,7 +1083,7 @@ class tree final  // TODO revamp: relocate, query,
     newParent.box = combine(leafAabb, sibling.box);
     newParent.height = sibling.height.value() + 1;
 
-    if (oldParentIndex) {
+    if (oldParentIndex != std::nullopt) {
       // The sibling was not the root
       auto& oldParent = m_nodes.at(oldParentIndex.value());
       if (oldParent.left == siblingIndex) {

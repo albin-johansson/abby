@@ -1081,7 +1081,7 @@ class tree final  // TODO revamp: relocate, query,
     auto& newParent = m_nodes.at(newParentIndex);
     newParent.parent = oldParentIndex;
     newParent.box = combine(leafAabb, sibling.box);
-    newParent.height = sibling.height.value() + 1;  // TODO maybe value_or(0)
+    newParent.height = sibling.height.value() + 1;
 
     if (oldParentIndex) {
       // The sibling was not the root

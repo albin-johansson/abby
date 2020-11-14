@@ -479,6 +479,10 @@ class tree final  // TODO revamp: relocate, query,
 
   tree()
   {
+    assert(!m_rootIndex);
+    assert(m_nodeCount == 0);
+    assert(m_nodeCapacity > 0);
+
     m_nodes.resize(m_nodeCapacity);
     for (auto i = 0; i < m_nodeCapacity; ++i) {
       auto& node = m_nodes.at(i);

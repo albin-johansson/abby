@@ -469,6 +469,7 @@ class tree final  // TODO revamp: relocate, query,
 {
   template <typename U>
   using pmr_stack = std::stack<U, std::pmr::deque<U>>;
+  using opt_index = std::optional<int>;
 
  public:
   using key_type = Key;
@@ -712,6 +713,20 @@ class tree final  // TODO revamp: relocate, query,
     }
   }
 
+  /**
+   * \brief Prints a textual representation of the tree.
+   *
+   * \param stream the stream used to print the tree, e.g. `std::cout`,
+   * `std::clog` or `std::cerr`.
+   *
+   * \since 0.2.0
+   */
+  void print(std::ostream& stream) const
+  {
+    stream << "abby::tree\n";
+    print(stream, "", m_rootIndex, false);
+  }
+
   void set_fattening_factor(std::optional<double> factor) noexcept
   {
     m_thicknessFactor = factor;
@@ -761,8 +776,6 @@ class tree final  // TODO revamp: relocate, query,
   }
 
  private:
-  using opt_index = std::optional<index_type>;
-
   std::unordered_map<key_type, index_type> m_indexMap;
   std::vector<node_type> m_nodes;
 
@@ -773,6 +786,26 @@ class tree final  // TODO revamp: relocate, query,
   size_type m_nodeCapacity;
 
   std::optional<double> m_thicknessFactor{0.05};
+
+  void print(std::ostream& stream,
+             const std::string& prefix,
+             const opt_index index,
+             const bool isLeft) const
+  {
+    if (index) {
+      const auto& node = m_nodes.at(*index);
+
+      stream << prefix << (isLeft ? "├── " : "└── ");
+      if (node.is_leaf()) {
+        stream << node.id.value() << "\n";
+      } else {
+        stream << "X\n";
+      }
+
+      print(stream, prefix + (isLeft ? "│   " : "    "), node.left, true);
+      print(stream, prefix + (isLeft ? "│   " : "    "), node.right, false);
+    }
+  }
 
   /**
    * \brief Resizes the node vector.

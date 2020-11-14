@@ -405,27 +405,27 @@ struct aabb_node final
 namespace detail {
 
 template <typename T, typename U>
-[[nodiscard]] constexpr auto get_left_cost(const aabb_node<T, U>& left,
-                                           const aabb_node<T, U>& leaf,
+[[nodiscard]] constexpr auto get_left_cost(const aabb<T>& leafAabb,
+                                           const aabb_node<U, T>& left,
                                            const double minimumCost) -> double
 {
   if (left.is_leaf()) {
-    return combine(leaf.box, left.box).area() + minimumCost;
+    return combine(leafAabb, left.box).area() + minimumCost;
   } else {
-    const auto newLeftAabb = combine(leaf.box, left.box);
+    const auto newLeftAabb = combine(leafAabb, left.box);
     return (newLeftAabb.area() - left.box.area()) + minimumCost;
   }
 }
 
 template <typename T, typename U>
-[[nodiscard]] constexpr auto get_right_cost(const aabb_node<T, U>& right,
-                                            const aabb_node<T, U>& leaf,
+[[nodiscard]] constexpr auto get_right_cost(const aabb<T>& leafAabb,
+                                            const aabb_node<U, T>& right,
                                             const double minimumCost) -> double
 {
   if (right.is_leaf()) {
-    return combine(leaf.box, right.box).area() + minimumCost;
+    return combine(leafAabb, right.box).area() + minimumCost;
   } else {
-    const auto newRightAabb = combine(leaf.box, right.box);
+    const auto newRightAabb = combine(leafAabb, right.box);
     return (newRightAabb.area() - right.box.area()) + minimumCost;
   }
 }
@@ -1057,9 +1057,7 @@ class tree final  // TODO revamp: relocate, query,
       assert(index != right);
 
       const auto area = node.box.area();
-
-      const auto combinedAabb = combine(node.box, leafAabb);
-      const auto combinedArea = combinedAabb.area();
+      const auto combinedArea = combine(node.box, leafAabb).area();
 
       // Cost of creating a new parent for this node and the new leaf.
       const auto cost = 2.0 * combinedArea;
@@ -1068,9 +1066,9 @@ class tree final  // TODO revamp: relocate, query,
       const auto minimumCost = 2.0 * (combinedArea - area);
 
       const auto costLeft =
-          detail::get_left_cost(m_nodes.at(left), node, minimumCost);
+          detail::get_left_cost(leafAabb, m_nodes.at(left), minimumCost);
       const auto costRight =
-          detail::get_right_cost(m_nodes.at(right), node, minimumCost);
+          detail::get_right_cost(leafAabb, m_nodes.at(right), minimumCost);
 
       // Descend according to the minimum cost.
       if ((cost < costLeft) && (cost < costRight)) {

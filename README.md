@@ -1,4 +1,4 @@
-# abby [![Build status](https://ci.appveyor.com/api/projects/status/p0ej0hg4cmemaeau?svg=true)](https://ci.appveyor.com/project/AlbinJohansson/abby) [![Build Status](https://travis-ci.org/albin-johansson/abby.svg?branch=dev)](https://travis-ci.org/albin-johansson/abby) ![version](https://img.shields.io/badge/version-0.1.0-blue.svg) [![Language](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+# abby [![Build status](https://ci.appveyor.com/api/projects/status/p0ej0hg4cmemaeau?svg=true)](https://ci.appveyor.com/project/AlbinJohansson/abby) [![Build Status](https://travis-ci.org/albin-johansson/abby.svg?branch=dev)](https://travis-ci.org/albin-johansson/abby) ![version](https://img.shields.io/badge/version-0.2.0-blue.svg) [![Language](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 A header-only implementation of an AABB tree.
 
@@ -13,6 +13,7 @@ Collision detection is common in many applications, especially games. Subsequent
   #include <abby.hpp>
   #include <iterator> // back_inserter
   #include <vector>   // vector
+  #include <iostream> // clog
 
   void foo()
   {
@@ -36,6 +37,9 @@ Collision detection is common in many applications, especially games. Subsequent
       // Obtains an AABB
       const auto& aabb = tree.get_aabb(candidate);
     }
+  
+    // Prints the tree using a stream
+    tree.print(std::clog);
 
     // Replaces an AABB
     tree.replace(2, abby::make_aabb(abby::vec2{33.0, 76.0}, abby::vec2{123.0, 155.0}));

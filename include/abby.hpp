@@ -41,7 +41,9 @@
 #include <deque>            // deque
 #include <memory_resource>  // monotonic_buffer_resource
 #include <optional>         // optional
+#include <ostream>          // ostream
 #include <stack>            // stack
+#include <string>           // string
 #include <unordered_map>    // unordered_map
 #include <vector>           // vector
 

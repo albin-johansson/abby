@@ -845,10 +845,6 @@ class tree final  // TODO revamp: relocate, query,
     m_nodeCapacity *= 2;
     resize_to_match_node_capacity(m_nodeCount);
 
-    auto& node = m_nodes.at(m_nodeCapacity - 1);
-    node.next = std::nullopt;
-    node.height = std::nullopt;
-
     // Update the index of the next free node
     m_nextFreeNodeIndex = static_cast<index_type>(m_nodeCount);
   }

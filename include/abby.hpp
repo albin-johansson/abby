@@ -1026,6 +1026,9 @@ class tree final  // TODO revamp: relocate, query,
       const auto left = node.left.value();
       const auto right = node.right.value();
 
+      assert(index != left);
+      assert(index != right);
+
       const auto area = node.box.area();
 
       const auto combinedAabb = combine(node.box, leafAabb);

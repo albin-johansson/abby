@@ -340,7 +340,7 @@ class tree final
   using aabb_type = aabb<value_type>;
   using node_type = node<key_type, value_type>;
   using size_type = std::size_t;
-  using index_type = unsigned int;
+  using index_type = int;
 
   explicit tree(const size_type capacity = 16) : m_nodeCapacity{capacity}
   {
@@ -400,20 +400,20 @@ class tree final
   void clear()
   {
     // Iterator pointing to the start of the particle map.
-    const auto it = m_indexMap.begin();
+    auto it = m_indexMap.begin();
 
     // Iterate over the map.
     while (it != m_indexMap.end()) {
       // Extract the node index.
-      unsigned int node = it->second;
+      const auto nodeIndex = it->second;
 
-      assert(node < m_nodeCapacity);
-      assert(m_nodes[node].is_leaf());
+      assert(nodeIndex < m_nodeCapacity);
+      assert(m_nodes.at(nodeIndex).is_leaf());
 
-      remove_leaf(node);
-      free_node(node);
+      remove_leaf(nodeIndex);
+      free_node(nodeIndex);
 
-      it++;
+      ++it;
     }
 
     // Clear the particle map.
@@ -1145,8 +1145,11 @@ class tree final
   [[nodiscard]] auto compute_height(const maybe_index nodeIndex) const
       -> size_type
   {
+    if (!nodeIndex) {
+      return 0;
+    }
+
     assert(nodeIndex < m_nodeCapacity);
-    assert(nodeIndex != std::nullopt);
 
     const auto& node = m_nodes.at(*nodeIndex);
     if (node.is_leaf()) {

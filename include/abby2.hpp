@@ -1,16 +1,20 @@
 #pragma once
 
-#include <algorithm>      // min, max, clamp
-#include <cassert>        // assert
-#include <cmath>          // abs
-#include <limits>         // numeric_limits
-#include <optional>       // optional
-#include <ostream>        // ostream
-#include <stack>          // stack
-#include <stdexcept>      // invalid_argument
-#include <string>         // string
-#include <unordered_map>  // unordered_map
-#include <vector>         // vector
+#include <algorithm>        // min, max, clamp
+#include <array>            // array
+#include <cassert>          // assert
+#include <cmath>            // abs
+#include <cstddef>          // byte
+#include <deque>            // deque
+#include <limits>           // numeric_limits
+#include <memory_resource>  // monotonic_buffer_resource
+#include <optional>         // optional
+#include <ostream>          // ostream
+#include <stack>            // stack
+#include <stdexcept>        // invalid_argument
+#include <string>           // string
+#include <unordered_map>    // unordered_map
+#include <vector>           // vector
 
 namespace abby2 {
 
@@ -326,6 +330,9 @@ struct node final
 template <typename Key, typename T = double>
 class tree final
 {
+  template <typename U>
+  using pmr_stack = std::stack<U, std::pmr::deque<U>>;
+
  public:
   using value_type = T;
   using key_type = Key;
@@ -471,66 +478,67 @@ class tree final
     }
   }
 
-  [[nodiscard]] auto query(const key_type& id) const -> std::vector<key_type>
+  /**
+   * \brief Obtains collision candidates for the AABB associated with the
+   * specified ID.
+   *
+   * \details In order to avoid unnecessary dynamic allocations, this function
+   * returns the resulting collision candidates through an output iterator. This
+   * means that it is possible to write collision candidates to both a stack
+   * buffer and something like a `std::vector`.
+   *
+   * \details The output iterator can for instance be obtained using
+   * `std::back_inserter`, if you're writing to a standard container.
+   *
+   * \note This function has no effect if the supplied key is unknown.
+   *
+   * \tparam bufferSize the size of the initial stack buffer.
+   * \tparam OutputIterator the type of the output iterator.
+   *
+   * \param key the ID associated with the AABB to obtain collision candidates
+   * for.
+   * \param[out] iterator the output iterator used to write the collision
+   * candidate IDs.
+   *
+   * \since 0.1.0
+   */
+  template <size_type bufferSize = 256, typename OutputIterator>
+  void query(const key_type& key, OutputIterator iterator) const
   {
-    // Make sure that this is a valid particle.
-    if (m_indexMap.count(id) == 0) {
-      throw std::invalid_argument("[ERROR]: Invalid particle index!");
+    if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
+      const auto& sourceNode = m_nodes.at(it->second);
+
+      std::array<std::byte, sizeof(maybe_index) * bufferSize> buffer;
+      std::pmr::monotonic_buffer_resource resource{buffer.data(),
+                                                   sizeof buffer};
+
+      pmr_stack<maybe_index> stack{&resource};
+      stack.push(m_root);
+      while (!stack.empty()) {
+        const auto nodeIndex = stack.top();
+        stack.pop();
+
+        if (!nodeIndex) {
+          continue;
+        }
+
+        const auto& node = m_nodes.at(*nodeIndex);
+
+        // Test for overlap between the AABBs
+        if (sourceNode.aabb.overlaps(node.aabb, m_touchIsOverlap)) {
+          if (node.is_leaf() && node.id) {
+            if (node.id != key) {  // Can't interact with itself
+              *iterator = *node.id;
+              ++iterator;
+            }
+          } else {
+            stack.push(node.left);
+            stack.push(node.right);
+          }
+        }
+      }
     }
-
-    // Test overlap of particle AABB against all other particles.
-    return query(id, m_nodes[m_indexMap.find(id)->second].aabb);
   }
-
-  //  [[nodiscard]] auto query(const key_type& id, const aabb_type& aabb) const
-  //      -> std::vector<key_type>
-  //  {
-  //    std::vector<maybe_index> stack;
-  //    stack.reserve(256);
-  //    stack.push_back(m_root);
-  //
-  //    std::vector<key_type> particles;
-  //
-  //    while (!stack.empty()) {
-  //      const auto node = stack.back();
-  //      stack.pop_back();
-  //
-  //      if (node == std::nullopt) {
-  //        continue;
-  //      }
-  //
-  //      // Copy the AABB.
-  //      const auto nodeAABB = m_nodes[*node].aabb;
-  //
-  //      // Test for overlap between the AABBs.
-  //      if (aabb.overlaps(nodeAABB, m_touchIsOverlap)) {
-  //        // Check that we're at a leaf node.
-  //        if (m_nodes[*node].is_leaf()) {
-  //          // Can't interact with itself.
-  //          if (m_nodes[*node].id != id) {
-  //            particles.push_back(m_nodes[*node].id);
-  //          }
-  //        } else {
-  //          stack.push_back(m_nodes[*node].left);
-  //          stack.push_back(m_nodes[*node].right);
-  //        }
-  //      }
-  //    }
-  //
-  //    return particles;
-  //  }
-  //
-  //  [[nodiscard]] auto query(const aabb_type& aabb) const ->
-  //  std::vector<key_type>
-  //  {
-  //    // Make sure the tree isn't empty.
-  //    if (m_indexMap.size() == 0) {
-  //      return {};
-  //    }
-  //
-  //    // Test overlap of AABB against all particles.
-  //    return query(std::numeric_limits<unsigned int>::max(), aabb);
-  //  }
 
   [[nodiscard]] auto compute_maximum_balance() const -> size_type
   {

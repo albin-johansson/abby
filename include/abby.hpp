@@ -859,7 +859,7 @@ class tree final  // TODO revamp: relocate, query,
 
     ++m_nodeCount;
 
-    return index;
+    return nodeIndex;
   }
 
   void free_node(const index_type nodeIndex)

@@ -204,55 +204,15 @@ class tree final
   using size_type = std::size_t;
   using index_type = unsigned int;
 
-  //  [[deprecated]] explicit tree(double skinThickness = 0.05,
-  //                               size_type nParticles = 16,
-  //                               bool touchIsOverlap = true)
-  //      : m_skinThickness{skinThickness},
-  //        m_touchIsOverlap{touchIsOverlap}
-  //  {
-  //    // Initialise the tree.
-  //    m_root = std::nullopt;
-  //    m_nodeCount = 0;
-  //    m_nodeCapacity = nParticles;
-  //
-  //    resize_to_match_node_capacity(0);
-  //    //    m_nodes.resize(m_nodeCapacity);
-  //    //
-  //    //    // Build a linked list for the list of free nodes.
-  //    //    for (auto i = 0; i < m_nodeCapacity - 1; i++) {
-  //    //      m_nodes[i].next = i + 1;
-  //    //      m_nodes[i].height = -1;
-  //    //    }
-  //    //    m_nodes[m_nodeCapacity - 1].next = std::nullopt;
-  //    //    m_nodes[m_nodeCapacity - 1].height = -1;
-  //
-  //    // Assign the index of the first free node.
-  //    m_nextFreeIndex = 0;
-  //  }
-
-  explicit tree(const size_type nParticles = 16)
-      : m_nodeCapacity{nParticles}
-//        m_skinThickness{0},
-//        m_touchIsOverlap{true}
+  explicit tree(const size_type capacity = 16) : m_nodeCapacity{capacity}
   {
-    // Initialise the tree.
-    m_root = std::nullopt;
-    m_nodeCount = 0;
-    m_nodeCapacity = nParticles;
+    assert(m_root == std::nullopt);
+    assert(m_nodeCount == 0);
+    assert(m_nodeCapacity == capacity);
 
     resize_to_match_node_capacity(0);
-    //    m_nodes.resize(m_nodeCapacity);
-    //
-    //    // Build a linked list for the list of free nodes.
-    //    for (auto i = 0; i < m_nodeCapacity - 1; i++) {
-    //      m_nodes[i].next = i + 1;
-    //      m_nodes[i].height = -1;
-    //    }
-    //    m_nodes[m_nodeCapacity - 1].next = std::nullopt;
-    //    m_nodes[m_nodeCapacity - 1].height = -1;
 
-    // Assign the index of the first free node.
-    m_nextFreeIndex = 0;
+    assert(m_nextFreeIndex == 0);
   }
 
   void insert(const key_type& id,

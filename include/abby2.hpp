@@ -683,8 +683,8 @@ class tree final
   void validate() const
   {
 #ifndef NDEBUG
-    validateStructure(m_root);
-    validateMetrics(m_root);
+    validate_structure(m_root);
+    validate_metrics(m_root);
 
     auto freeCount = 0;
     auto freeIndex = m_nextFreeIndex;
@@ -1192,34 +1192,36 @@ class tree final
   /*! \param node
           The index of the root node.
    */
-  void validateStructure(maybe_index node) const
+  void validate_structure(const maybe_index nodeIndex) const
   {
-    if (node == std::nullopt) {
+    if (nodeIndex == std::nullopt) {
       return;
     }
 
-    if (node == m_root) {
-      assert(m_nodes[*node].parent == std::nullopt);
+    const auto& node = m_nodes.at(*nodeIndex);
+
+    if (nodeIndex == m_root) {
+      assert(node.parent == std::nullopt);
     }
 
-    const auto left = m_nodes[*node].left;
-    const auto right = m_nodes[*node].right;
+    const auto left = node.left;
+    const auto right = node.right;
 
-    if (m_nodes[*node].is_leaf()) {
+    if (node.is_leaf()) {
       assert(left == std::nullopt);
       assert(right == std::nullopt);
-      assert(m_nodes[*node].height == 0);
+      assert(node.height == 0);
     } else {
       assert(left < m_nodeCapacity);
       assert(right < m_nodeCapacity);
       assert(left != std::nullopt);
       assert(right != std::nullopt);
 
-      assert(m_nodes[*left].parent == node);
-      assert(m_nodes[*right].parent == node);
+      assert(m_nodes.at(*left).parent == nodeIndex);
+      assert(m_nodes.at(*right).parent == nodeIndex);
 
-      validateStructure(left);
-      validateStructure(right);
+      validate_structure(left);
+      validate_structure(right);
     }
   }
 
@@ -1227,19 +1229,20 @@ class tree final
   /*! \param node
           The index of the root node.
    */
-  void validateMetrics(maybe_index node) const
+  void validate_metrics(const maybe_index nodeIndex) const
   {
-    if (node == std::nullopt) {
+    if (nodeIndex == std::nullopt) {
       return;
     }
 
-    const auto left = m_nodes[*node].left;
-    const auto right = m_nodes[*node].right;
+    const auto& node = m_nodes.at(*nodeIndex);
+    const auto left = node.left;
+    const auto right = node.right;
 
-    if (m_nodes[*node].is_leaf()) {
+    if (node.is_leaf()) {
       assert(left == std::nullopt);
       assert(right == std::nullopt);
-      assert(m_nodes[*node].height == 0);
+      assert(node.height == 0);
       return;
     } else {
       assert(left < m_nodeCapacity);
@@ -1247,21 +1250,21 @@ class tree final
       assert(left != std::nullopt);
       assert(right != std::nullopt);
 
-      const auto height1 = m_nodes[*left].height;
-      const auto height2 = m_nodes[*right].height;
-      const auto height = 1 + std::max(height1, height2);
-      assert(m_nodes[*node].height == height);
+      const auto leftHeight = m_nodes.at(*left).height;
+      const auto rightHeight = m_nodes.at(*right).height;
+      const auto height = 1 + std::max(leftHeight, rightHeight);
+      assert(node.height == height);
 
       const auto aabb =
-          aabb_type::merge(m_nodes[*left].aabb, m_nodes[*right].aabb);
+          aabb_type::merge(m_nodes.at(*left).aabb, m_nodes.at(*right).aabb);
 
-      for (auto i = 0; i < 2; i++) {
-        assert(aabb.m_min[i] == m_nodes[*node].aabb.m_min[i]);
-        assert(aabb.m_max[i] == m_nodes[*node].aabb.m_max[i]);
+      for (auto i = 0; i < 2; ++i) {
+        assert(aabb.m_min[i] == node.aabb.m_min[i]);
+        assert(aabb.m_max[i] == node.aabb.m_max[i]);
       }
 
-      validateMetrics(left);
-      validateMetrics(right);
+      validate_metrics(left);
+      validate_metrics(right);
     }
   }
 };

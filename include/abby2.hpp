@@ -181,20 +181,33 @@ class aabb final
     //    }
   }
 
-  constexpr void merge(const aabb& fst, const aabb& snd)
+  //  [[deprecated]] constexpr void merge(const aabb& fst, const aabb& snd)
+  //  {
+  //    //    m_min.x = std::min(fst.m_min.x, snd.m_min.x);
+  //    //    m_min.y = std::min(fst.m_min.y, snd.m_min.y);
+  //    //
+  //    //    m_max.x = std::min(fst.m_max.x, snd.m_max.x);
+  //    //    m_max.y = std::min(fst.m_max.y, snd.m_max.y);
+  //    for (auto i = 0; i < 2; i++) {
+  //      m_min[i] = std::min(fst.m_min[i], snd.m_min[i]);
+  //      m_max[i] = std::max(fst.m_max[i], snd.m_max[i]);
+  //    }
+  //
+  //    m_area = compute_area();
+  //    //    centre = computeCentre();
+  //  }
+
+  [[nodiscard]] static auto merge(const aabb& fst, const aabb& snd) -> aabb
   {
-    //    m_min.x = std::min(fst.m_min.x, snd.m_min.x);
-    //    m_min.y = std::min(fst.m_min.y, snd.m_min.y);
-    //
-    //    m_max.x = std::min(fst.m_max.x, snd.m_max.x);
-    //    m_max.y = std::min(fst.m_max.y, snd.m_max.y);
-    for (auto i = 0; i < 2; i++) {
-      m_min[i] = std::min(fst.m_min[i], snd.m_min[i]);
-      m_max[i] = std::max(fst.m_max[i], snd.m_max[i]);
+    vector_type lower;
+    vector_type upper;
+
+    for (auto i = 0; i < 2; ++i) {
+      lower[i] = std::min(fst.m_min[i], snd.m_min[i]);
+      upper[i] = std::max(fst.m_max[i], snd.m_max[i]);
     }
 
-    m_area = compute_area();
-    //    centre = computeCentre();
+    return aabb{lower, upper};
   }
 
   [[nodiscard]] constexpr auto contains(const aabb& other) const noexcept
@@ -848,9 +861,11 @@ class tree final
 
       const auto surfaceArea = m_nodes[*index].aabb.area();
 
-      aabb_type combinedAABB;
-      combinedAABB.merge(m_nodes[*index].aabb, leafAABB);
-      const auto combinedSurfaceArea = combinedAABB.area();
+      const auto combinedAabb =
+          aabb_type::merge(m_nodes[*index].aabb, leafAABB);
+      //      aabb_type combinedAABB;
+      //      combinedAABB.merge(m_nodes[*index].aabb, leafAABB);
+      const auto combinedSurfaceArea = combinedAabb.area();
 
       // Cost of creating a new parent for this node and the new leaf.
       const auto cost = 2.0 * combinedSurfaceArea;
@@ -861,28 +876,24 @@ class tree final
       // Cost of descending to the left.
       double costLeft;
       if (m_nodes[left].is_leaf()) {
-        aabb_type aabb;
-        aabb.merge(leafAABB, m_nodes[left].aabb);
+        const auto aabb = aabb_type::merge(leafAABB, m_nodes[left].aabb);
         costLeft = aabb.area() + inheritanceCost;
       } else {
-        aabb_type aabb;
-        aabb.merge(leafAABB, m_nodes[left].aabb);
-        double oldArea = m_nodes[left].aabb.area();
-        double newArea = aabb.area();
+        const auto aabb = aabb_type::merge(leafAABB, m_nodes[left].aabb);
+        const auto oldArea = m_nodes[left].aabb.area();
+        const auto newArea = aabb.area();
         costLeft = (newArea - oldArea) + inheritanceCost;
       }
 
       // Cost of descending to the right.
       double costRight;
       if (m_nodes[right].is_leaf()) {
-        aabb_type aabb;
-        aabb.merge(leafAABB, m_nodes[right].aabb);
+        const auto aabb = aabb_type::merge(leafAABB, m_nodes[right].aabb);
         costRight = aabb.area() + inheritanceCost;
       } else {
-        aabb_type aabb;
-        aabb.merge(leafAABB, m_nodes[right].aabb);
-        double oldArea = m_nodes[right].aabb.area();
-        double newArea = aabb.area();
+        const auto aabb = aabb_type::merge(leafAABB, m_nodes[right].aabb);
+        const auto oldArea = m_nodes[right].aabb.area();
+        const auto newArea = aabb.area();
         costRight = (newArea - oldArea) + inheritanceCost;
       }
 
@@ -905,7 +916,8 @@ class tree final
     const auto oldParent = m_nodes[sibling].parent;
     const auto newParent = allocate_node();
     m_nodes[newParent].parent = oldParent;
-    m_nodes[newParent].aabb.merge(leafAABB, m_nodes[sibling].aabb);
+    m_nodes[newParent].aabb = aabb_type::merge(leafAABB, m_nodes[sibling].aabb);
+    //    m_nodes[newParent].aabb.merge(leafAABB, m_nodes[sibling].aabb);
     m_nodes[newParent].height = m_nodes[sibling].height + 1;
 
     if (oldParent != std::nullopt) {  // The sibling was not the root.
@@ -937,7 +949,8 @@ class tree final
 
       m_nodes[*index].height =
           1 + std::max(m_nodes[left].height, m_nodes[right].height);
-      m_nodes[*index].aabb.merge(m_nodes[left].aabb, m_nodes[right].aabb);
+      m_nodes[*index].aabb =
+          aabb_type::merge(m_nodes[left].aabb, m_nodes[right].aabb);
 
       index = m_nodes[*index].parent;
     }
@@ -1038,8 +1051,10 @@ class tree final
         m_nodes[right].right = rightLeft;
         m_nodes[node].right = rightRight;
         m_nodes[rightRight].parent = node;
-        m_nodes[node].aabb.merge(m_nodes[left].aabb, m_nodes[rightRight].aabb);
-        m_nodes[right].aabb.merge(m_nodes[node].aabb, m_nodes[rightLeft].aabb);
+        m_nodes[node].aabb =
+            aabb_type::merge(m_nodes[left].aabb, m_nodes[rightRight].aabb);
+        m_nodes[right].aabb =
+            aabb_type::merge(m_nodes[node].aabb, m_nodes[rightLeft].aabb);
 
         m_nodes[node].height =
             1 + std::max(m_nodes[left].height, m_nodes[rightRight].height);
@@ -1049,8 +1064,10 @@ class tree final
         m_nodes[right].right = rightRight;
         m_nodes[node].right = rightLeft;
         m_nodes[rightLeft].parent = node;
-        m_nodes[node].aabb.merge(m_nodes[left].aabb, m_nodes[rightLeft].aabb);
-        m_nodes[right].aabb.merge(m_nodes[node].aabb, m_nodes[rightRight].aabb);
+        m_nodes[node].aabb =
+            aabb_type::merge(m_nodes[left].aabb, m_nodes[rightLeft].aabb);
+        m_nodes[right].aabb =
+            aabb_type::merge(m_nodes[node].aabb, m_nodes[rightRight].aabb);
 
         m_nodes[node].height =
             1 + std::max(m_nodes[left].height, m_nodes[rightLeft].height);
@@ -1091,8 +1108,10 @@ class tree final
         m_nodes[left].right = leftLeft;
         m_nodes[node].left = leftRight;
         m_nodes[leftRight].parent = node;
-        m_nodes[node].aabb.merge(m_nodes[right].aabb, m_nodes[leftRight].aabb);
-        m_nodes[left].aabb.merge(m_nodes[node].aabb, m_nodes[leftLeft].aabb);
+        m_nodes[node].aabb =
+            aabb_type::merge(m_nodes[right].aabb, m_nodes[leftRight].aabb);
+        m_nodes[left].aabb =
+            aabb_type::merge(m_nodes[node].aabb, m_nodes[leftLeft].aabb);
 
         m_nodes[node].height =
             1 + std::max(m_nodes[right].height, m_nodes[leftRight].height);
@@ -1102,8 +1121,10 @@ class tree final
         m_nodes[left].right = leftRight;
         m_nodes[node].left = leftLeft;
         m_nodes[leftLeft].parent = node;
-        m_nodes[node].aabb.merge(m_nodes[right].aabb, m_nodes[leftLeft].aabb);
-        m_nodes[left].aabb.merge(m_nodes[node].aabb, m_nodes[leftRight].aabb);
+        m_nodes[node].aabb =
+            aabb_type::merge(m_nodes[right].aabb, m_nodes[leftLeft].aabb);
+        m_nodes[left].aabb =
+            aabb_type::merge(m_nodes[node].aabb, m_nodes[leftRight].aabb);
 
         m_nodes[node].height =
             1 + std::max(m_nodes[right].height, m_nodes[leftLeft].height);
@@ -1201,8 +1222,8 @@ class tree final
       const auto height = 1 + std::max(height1, height2);
       assert(m_nodes[*node].height == height);
 
-      aabb_type aabb;
-      aabb.merge(m_nodes[*left].aabb, m_nodes[*right].aabb);
+      const auto aabb =
+          aabb_type::merge(m_nodes[*left].aabb, m_nodes[*right].aabb);
 
       for (auto i = 0; i < 2; i++) {
         assert(aabb.m_min[i] == m_nodes[*node].aabb.m_min[i]);

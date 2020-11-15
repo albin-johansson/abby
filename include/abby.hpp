@@ -1036,7 +1036,7 @@ class tree final  // TODO revamp: relocate, query,
 
   void fix_tree_upwards(opt_index nodeIndex)
   {
-    while (nodeIndex) {
+    while (nodeIndex != std::nullopt) {
       nodeIndex = balance(*nodeIndex);
 
       auto& node = m_nodes.at(*nodeIndex);

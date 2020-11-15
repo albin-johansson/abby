@@ -49,6 +49,10 @@ struct vector2 final
   }
 };
 
+// clang-format off
+template <typename T> vector2(T, T) -> vector2<T>;
+// clang-format on
+
 /**
  * \brief Adds two vectors and returns the result.
  *
@@ -307,6 +311,48 @@ class aabb final
   vector_type m_max;
   double m_area{};
 };
+
+// clang-format off
+template <typename T> aabb(vector2<T>, vector2<T>) -> aabb<T>;
+// clang-format on
+
+/**
+ * \brief Indicates whether or not two AABBs are equal.
+ *
+ * \tparam T the representation type used by the AABBs.
+ *
+ * \param lhs the left-hand side AABB.
+ * \param rhs the right-hand side AABB.
+ *
+ * \return `true` if the two AABBs are equal; `false` otherwise.
+ *
+ * \since 0.1.0
+ */
+template <typename T>
+[[nodiscard]] constexpr auto operator==(const aabb<T>& lhs,
+                                        const aabb<T>& rhs) noexcept -> bool
+{
+  return (lhs.min == rhs.min) && (lhs.max == rhs.max);
+}
+
+/**
+ * \brief Indicates whether or not two AABBs aren't equal.
+ *
+ * \tparam T the representation type used by the AABBs.
+ *
+ * \param lhs the left-hand side AABB.
+ * \param rhs the right-hand side AABB.
+ *
+ * \return `true` if the two AABBs aren't equal; `false` otherwise.
+ *
+ * \since 0.1.0
+ */
+template <typename T>
+[[nodiscard]] constexpr auto operator!=(const aabb<T>& lhs,
+                                        const aabb<T>& rhs) noexcept -> bool
+{
+  return !(lhs == rhs);
+}
 
 template <typename Key, typename T>
 struct node final

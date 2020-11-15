@@ -189,22 +189,16 @@ class aabb final
     //    }
   }
 
-  //  [[deprecated]] constexpr void merge(const aabb& fst, const aabb& snd)
-  //  {
-  //    //    m_min.x = std::min(fst.m_min.x, snd.m_min.x);
-  //    //    m_min.y = std::min(fst.m_min.y, snd.m_min.y);
-  //    //
-  //    //    m_max.x = std::min(fst.m_max.x, snd.m_max.x);
-  //    //    m_max.y = std::min(fst.m_max.y, snd.m_max.y);
-  //    for (auto i = 0; i < 2; i++) {
-  //      m_min[i] = std::min(fst.m_min[i], snd.m_min[i]);
-  //      m_max[i] = std::max(fst.m_max[i], snd.m_max[i]);
-  //    }
-  //
-  //    m_area = compute_area();
-  //    //    centre = computeCentre();
-  //  }
-
+  /**
+   * \brief Returns an AABB that is the union of the supplied pair of AABBs.
+   *
+   * \param fst the first AABB.
+   * \param snd the second AABB.
+   *
+   * \return an AABB that is the union of the two supplied AABBs.
+   *
+   * \since 0.1.0
+   */
   [[nodiscard]] static auto merge(const aabb& fst, const aabb& snd) -> aabb
   {
     vector_type lower;
@@ -218,6 +212,21 @@ class aabb final
     return aabb{lower, upper};
   }
 
+  /**
+   * \brief Indicates whether or not the supplied AABB is contained within the
+   * invoked AABB.
+   *
+   * \note The supplied AABB is still considered to be contained within the
+   * invoked AABB if the borders of the inner AABB are overlapping the borders
+   * of the outer AABB.
+   *
+   * \param other the AABB to check.
+   *
+   * \return `true` if the supplied AABB is contained in the AABB; `false`
+   * otherwise.
+   *
+   * \since 0.1.0
+   */
   [[nodiscard]] constexpr auto contains(const aabb& other) const noexcept
       -> bool
   {
@@ -238,6 +247,18 @@ class aabb final
     return true;
   }
 
+  /**
+   * \brief Indicates whether or not two AABBs are overlapping each other.
+   *
+   * \param other the other AABB to compare with.
+   * \param touchIsOverlap `true` if the AABBs are considered to be overlapping
+   * if they touch; `false` otherwise.
+   *
+   * \return `true` if the two AABBs are overlapping each other; `false`
+   * otherwise.
+   *
+   * \since 0.1.0
+   */
   [[nodiscard]] constexpr auto overlaps(const aabb& other,
                                         bool touchIsOverlap) const noexcept
       -> bool
@@ -271,6 +292,13 @@ class aabb final
     return true;
   }
 
+  /**
+   * \brief Computes and returns the area of the AABB.
+   *
+   * \return the computed area of the AABB.
+   *
+   * \since 0.2.0
+   */
   [[nodiscard]] constexpr auto compute_area() const noexcept -> double
   {
     //    const auto width = m_max.x - m_min.x;
@@ -301,21 +329,49 @@ class aabb final
     return 2.0 * sum;
   }
 
+  /**
+   * \brief Returns the stored area of the AABB.
+   *
+   * \return the stored area of the AABB.
+   *
+   * \since 0.2.0
+   */
   [[nodiscard]] constexpr auto area() const noexcept -> double
   {
     return m_area;
   }
 
+  /**
+   * \brief Returns the width of the AABB.
+   *
+   * \return the width of the AABB.
+   *
+   * \since 0.2.0
+   */
   [[nodiscard]] constexpr auto width() const noexcept -> T
   {
     return m_max.x - m_min.x;
   }
 
+  /**
+   * \brief Returns the height of the AABB.
+   *
+   * \return the height of the AABB.
+   *
+   * \since 0.2.0
+   */
   [[nodiscard]] constexpr auto height() const noexcept -> T
   {
     return m_max.y - m_min.y;
   }
 
+  /**
+   * \brief Returns the size of the AABB.
+   *
+   * \return the size of the AABB (width and height).
+   *
+   * \since 0.2.0
+   */
   [[nodiscard]] constexpr auto size() const noexcept -> vector_type
   {
     return m_max - m_min;
@@ -369,6 +425,21 @@ template <typename T>
   return !(lhs == rhs);
 }
 
+/**
+ * \struct node
+ *
+ * \brief Represents a node in an AABB tree.
+ *
+ * \details Contains an AABB and the entity associated with the AABB, along
+ * with tree information.
+ *
+ * \tparam Key the type of the keys associated with each node.
+ * \tparam T the representation type used by the AABBs.
+ *
+ * \since 0.1.0
+ *
+ * \headerfile abby.hpp
+ */
 template <typename Key, typename T>
 struct node final
 {
@@ -390,6 +461,20 @@ struct node final
   }
 };
 
+/**
+ * \class tree
+ *
+ * \brief Represents a tree of AABBs used for efficient collision detection.
+ *
+ * \tparam Key the type of the keys associated with each node. Must be
+ * comparable and preferably small and cheap to copy type, e.g. `int`.
+ * \tparam T the representation type used by the AABBs, should be a
+ * floating-point type for best precision.
+ *
+ * \since 0.1.0
+ *
+ * \headerfile abby.hpp
+ */
 template <typename Key, typename T = double>
 class tree final
 {
@@ -405,6 +490,13 @@ class tree final
   using size_type = std::size_t;
   using index_type = int;
 
+  /**
+   * \brief Creates an AABB tree.
+   *
+   * \param capacity the initial node capacity of the tree.
+   *
+   * \since 0.1.0
+   */
   explicit tree(const size_type capacity = 16) : m_nodeCapacity{capacity}
   {
     assert(m_root == std::nullopt);
@@ -416,17 +508,28 @@ class tree final
     assert(m_nextFreeIndex == 0);
   }
 
-  void insert(const key_type& id,
+  /**
+   * \brief Inserts an AABB in the tree.
+   *
+   * \pre `key` cannot be in use at the time of invoking this function.
+   *
+   * \param key the ID that will be associated with the box.
+   * \param lowerBound the lower-bound position of the AABB (i.e. the position).
+   * \param upperBound the upper-bound position of the AABB.
+   *
+   * \since 0.1.0
+   */
+  void insert(const key_type& key,
               const vector_type& lowerBound,
               const vector_type& upperBound)
   {
     // Make sure the particle doesn't already exist
-    assert(!m_indexMap.count(id));
+    assert(!m_indexMap.count(key));
 
     // Allocate a new node for the particle
     const auto nodeIndex = allocate_node();
     auto& node = m_nodes.at(nodeIndex);
-    node.id = id;
+    node.id = key;
     node.aabb = {lowerBound, upperBound};
     node.aabb.fatten(m_skinThickness);
     node.height = 0;
@@ -434,13 +537,23 @@ class tree final
     // m_nodes[node].aabb.m_centre = m_nodes[node].aabb.computeCentre();
 
     insert_leaf(nodeIndex);
-    m_indexMap.emplace(id, nodeIndex);
+    m_indexMap.emplace(key, nodeIndex);
 
 #ifndef NDEBUG
     validate();
 #endif
   }
 
+  /**
+   * \brief Removes the AABB associated with the specified ID.
+   *
+   * \note This function has no effect if there is no AABB associated with the
+   * specified ID.
+   *
+   * \param key the ID associated with the AABB that will be removed.
+   *
+   * \since 0.1.0
+   */
   void erase(const key_type& key)
   {
     if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
@@ -487,12 +600,36 @@ class tree final
 #endif
   }
 
+  /**
+   * \brief Prints a textual representation of the tree.
+   *
+   * \param stream the stream used to print the tree, e.g. `std::cout`,
+   * `std::clog` or `std::cerr`.
+   *
+   * \since 0.2.0
+   */
   void print(std::ostream& stream) const
   {
     stream << "abby::tree\n";
     print(stream, "", m_root, false);
   }
 
+  /**
+   * \brief Updates the AABB associated with the specified ID.
+   *
+   * \note This function has no effect if there is no AABB associated with the
+   * specified ID.
+   *
+   * \param key the ID associated with the AABB that will be replaced.
+   * \param box the new AABB that will be associated with the specified ID.
+   * \param forceReinsert indicates whether or not the AABB is always
+   * reinserted, which wont happen if this is set to `true` and the new AABB is
+   * within the old AABB.
+   *
+   * \return `true` if an AABB was updated; `false` otherwise.
+   *
+   * \since 0.1.0
+   */
   auto update(const key_type& key, aabb_type aabb, bool forceReinsert = false)
       -> bool
   {
@@ -535,6 +672,22 @@ class tree final
     return update(key, {lowerBound, upperBound}, forceReinsert);
   }
 
+  /**
+   * \brief Updates the position of the AABB associated with the specified ID.
+   *
+   * \note This function has no effect if there is no AABB associated with the
+   * specified ID.
+   *
+   * \param key the ID associated with the AABB that will be moved.
+   * \param position the new position of the AABB associated with the specified
+   * ID.
+   * \param forceReinsert `true` if the associated AABB is forced to be
+   * reinserted into the tree.
+   *
+   * \return `true` if an AABB was updated; `false` otherwise.
+   *
+   * \since 0.1.0
+   */
   auto relocate(const key_type& key,
                 const vector_type& position,
                 bool forceReinsert = false) -> bool
@@ -750,11 +903,29 @@ class tree final
 #endif
   }
 
-  [[nodiscard]] auto get_aabb(const key_type& id) const -> const aabb_type&
+  /**
+   * \brief Returns the AABB associated with the specified ID.
+   *
+   * \param key the ID associated with the desired AABB.
+   *
+   * \return the AABB associated with the specified ID.
+   *
+   * \throws if there is no AABB associated with the supplied ID.
+   *
+   * \since 0.1.0
+   */
+  [[nodiscard]] auto get_aabb(const key_type& key) const -> const aabb_type&
   {
-    return m_nodes.at(m_indexMap.at(id)).aabb;
+    return m_nodes.at(m_indexMap.at(key)).aabb;
   }
 
+  /**
+   * \brief Returns the current height of the tree.
+   *
+   * \return the height of the tree.
+   *
+   * \since 0.2.0
+   */
   [[nodiscard]] auto height() const -> int
   {
     if (m_root == std::nullopt) {
@@ -764,11 +935,28 @@ class tree final
     }
   }
 
+  /**
+   * \brief Returns the number of nodes in the tree.
+   *
+   * \return the amount of nodes in the tree.
+   *
+   * \since 0.2.0
+   */
   [[nodiscard]] auto node_count() const noexcept -> size_type
   {
     return m_nodeCount;
   }
 
+  /**
+   * \brief Returns the amount of AABBs stored in the tree.
+   *
+   * \note The returned value is not necessarily the amount of _nodes_ in the
+   * tree.
+   *
+   * \return the current amount of AABBs stored in the tree.
+   *
+   * \since 0.1.0
+   */
   [[nodiscard]] auto size() const noexcept -> size_type
   {
     return m_indexMap.size();

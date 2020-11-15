@@ -1004,7 +1004,7 @@ class tree final  // TODO revamp: relocate, query,
   [[nodiscard]] auto balance(const index_type nodeIndex) -> index_type
   {
     const auto& node = m_nodes.at(nodeIndex);
-    if (node.is_leaf() || node.height < 2) {
+    if (node.is_leaf() || (node.height < 2)) {
       return nodeIndex;
     }
 

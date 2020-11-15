@@ -439,11 +439,6 @@ class tree final
               vector_type& upperBound,
               bool alwaysReinsert = false) -> bool
   {
-    // Validate the dimensionality of the bounds vectors.
-    if ((lowerBound.size() != dimension) && (upperBound.size() != dimension)) {
-      throw std::invalid_argument("[ERROR]: Dimensionality mismatch!");
-    }
-
     // Map iterator.
     std::unordered_map<unsigned int, unsigned int>::iterator it;
 

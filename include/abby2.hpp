@@ -18,7 +18,7 @@
 
 namespace abby2 {
 
-using maybe_index = std::optional<unsigned int>;
+using maybe_index = std::optional<int>;
 
 template <typename T>
 struct vector2 final
@@ -223,9 +223,13 @@ class aabb final
     //    } else {
     //      return true;
     //    }
-    for (unsigned int i = 0; i < 2; i++) {
-      if (other.m_min[i] < m_min[i]) return false;
-      if (other.m_max[i] > m_max[i]) return false;
+    for (auto i = 0; i < 2; ++i) {
+      if (other.m_min[i] < m_min[i]) {
+        return false;
+      }
+      if (other.m_max[i] > m_max[i]) {
+        return false;
+      }
     }
     return true;
   }
@@ -246,25 +250,21 @@ class aabb final
     //      }
     //    }
     //    return true;
-    bool rv = true;
-
     if (touchIsOverlap) {
-      for (unsigned int i = 0; i < 2; ++i) {
+      for (auto i = 0; i < 2; ++i) {
         if (other.m_max[i] < m_min[i] || other.m_min[i] > m_max[i]) {
-          rv = false;
-          break;
+          return false;
         }
       }
     } else {
-      for (unsigned int i = 0; i < 2; ++i) {
+      for (auto i = 0; i < 2; ++i) {
         if (other.m_max[i] <= m_min[i] || other.m_min[i] >= m_max[i]) {
-          rv = false;
-          break;
+          return false;
         }
       }
     }
 
-    return rv;
+    return true;
   }
 
   [[nodiscard]] constexpr auto compute_area() const noexcept -> double
@@ -277,14 +277,16 @@ class aabb final
 
     // General formula for one side: hold one dimension constant
     // and multiply by all the other ones.
-    for (unsigned int d1 = 0; d1 < 2; d1++) {
+    for (auto d1 = 0; d1 < 2; ++d1) {
       // "Area" of current side.
       double product = 1;
 
-      for (unsigned int d2 = 0; d2 < 2; d2++) {
-        if (d1 == d2) continue;
+      for (auto d2 = 0; d2 < 2; ++d2) {
+        if (d1 == d2) {
+          continue;
+        }
 
-        double dx = m_max[d2] - m_min[d2];
+        const auto dx = m_max[d2] - m_min[d2];
         product *= dx;
       }
 
@@ -682,7 +684,7 @@ class tree final
     }
   }
 
-  [[nodiscard]] auto node_count() const noexcept -> unsigned int
+  [[nodiscard]] auto node_count() const noexcept -> size_type
   {
     return m_nodeCount;
   }

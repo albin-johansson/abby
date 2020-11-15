@@ -2,7 +2,10 @@
 
 #include <algorithm>      // min, max
 #include <cassert>        // assert
+#include <limits>         // numeric_limits
+#include <optional>       // optional
 #include <ostream>        // ostream
+#include <stack>          // stack
 #include <stdexcept>      // invalid_argument
 #include <string>         // string
 #include <unordered_map>  // unordered_map
@@ -202,13 +205,13 @@ class tree final
   using size_type = std::size_t;
   using index_type = unsigned int;
 
-  explicit tree(unsigned int dimension_ = 3,
+  explicit tree(size_type dimension_ = 3,
                 double skinThickness_ = 0.05,
-                unsigned int nParticles = 16,
+                size_type nParticles = 16,
                 bool touchIsOverlap = true)
-      : dimension(dimension_),
-        skinThickness(skinThickness_),
-        touchIsOverlap(touchIsOverlap)
+      : dimension{dimension_},
+        skinThickness{skinThickness_},
+        touchIsOverlap{touchIsOverlap}
   {
     // Validate the dimensionality.
     if ((dimension < 2)) {
@@ -222,7 +225,7 @@ class tree final
     nodes.resize(nodeCapacity);
 
     // Build a linked list for the list of free nodes.
-    for (unsigned int i = 0; i < nodeCapacity - 1; i++) {
+    for (auto i = 0; i < nodeCapacity - 1; i++) {
       nodes[i].next = i + 1;
       nodes[i].height = -1;
     }
@@ -233,7 +236,7 @@ class tree final
     freeList = 0;
   }
 
-  void insertParticle(unsigned int particle,
+  void insertParticle(const key_type& particle,
                       vector_type& lowerBound,
                       vector_type& upperBound)
   {
@@ -288,12 +291,7 @@ class tree final
 #endif
   }
 
-  unsigned int nParticles()
-  {
-    return particleMap.size();
-  }
-
-  void removeParticle(unsigned int particle)
+  void removeParticle(const key_type& particle)
   {
     // Map iterator.
     std::unordered_map<unsigned int, unsigned int>::iterator it;
@@ -359,7 +357,7 @@ class tree final
 
   void print(std::ostream& stream,
              const std::string& prefix,
-             unsigned int index,
+             index_type index,
              bool isLeft) const
   {
     if (index != NULL_NODE) {
@@ -377,10 +375,10 @@ class tree final
     }
   }
 
-  bool updateParticle(unsigned int particle,
+  auto updateParticle(const key_type& particle,
                       vector_type& lowerBound,
                       vector_type& upperBound,
-                      bool alwaysReinsert = false)
+                      bool alwaysReinsert = false) -> bool
   {
     // Validate the dimensionality of the bounds vectors.
     if ((lowerBound.size() != dimension) && (upperBound.size() != dimension)) {
@@ -450,14 +448,8 @@ class tree final
     return true;
   }
 
-  //! Query the tree to find candidate interactions for a particle.
-  /*! \param particle
-          The particle index.
-
-      \return particles
-          A vector of particle indices.
-   */
-  std::vector<unsigned int> query(unsigned int particle)
+  [[nodiscard]] auto query(const key_type& particle) const
+      -> std::vector<key_type>
   {
     // Make sure that this is a valid particle.
     if (particleMap.count(particle) == 0) {
@@ -468,16 +460,17 @@ class tree final
     return query(particle, nodes[particleMap.find(particle)->second].aabb);
   }
 
-  std::vector<unsigned int> query(unsigned int particle, const aabb_type& aabb)
+  [[nodiscard]] auto query(const key_type& particle,
+                           const aabb_type& aabb) const -> std::vector<key_type>
   {
-    std::vector<unsigned int> stack;
+    std::vector<index_type> stack;
     stack.reserve(256);
     stack.push_back(root);
 
-    std::vector<unsigned int> particles;
+    std::vector<key_type> particles;
 
     while (stack.size() > 0) {
-      unsigned int node = stack.back();
+      const auto node = stack.back();
       stack.pop_back();
 
       // Copy the AABB.
@@ -503,14 +496,7 @@ class tree final
     return particles;
   }
 
-  //! Query the tree to find candidate interactions for an AABB.
-  /*! \param aabb
-          The AABB.
-
-      \return particles
-          A vector of particle indices.
-   */
-  std::vector<unsigned int> query(const aabb_type& aabb)
+  [[nodiscard]] auto query(const aabb_type& aabb) const -> std::vector<key_type>
   {
     // Make sure the tree isn't empty.
     if (particleMap.size() == 0) {
@@ -521,40 +507,7 @@ class tree final
     return query(std::numeric_limits<unsigned int>::max(), aabb);
   }
 
-  //! Get a particle AABB.
-  /*! \param particle
-          The particle index.
-   */
-  const aabb_type& getAABB(unsigned int particle)
-  {
-    return nodes[particleMap[particle]].aabb;
-  }
-
-  //! Get the height of the tree.
-  /*! \return
-          The height of the binary tree.
-   */
-  unsigned int getHeight() const
-  {
-    if (root == NULL_NODE) return 0;
-    return nodes[root].height;
-  }
-
-  //! Get the number of nodes in the tree.
-  /*! \return
-          The number of nodes in the tree.
-   */
-  unsigned int getNodeCount() const
-  {
-    return nodeCount;
-  }
-
-  //! Compute the maximum balancance of the tree.
-  /*! \return
-          The maximum difference between the height of two
-          children of a node.
-   */
-  unsigned int computeMaximumBalance() const
+  [[nodiscard]] auto computeMaximumBalance() const -> unsigned int
   {
     unsigned int maxBalance = 0;
     for (unsigned int i = 0; i < nodeCapacity; i++) {
@@ -570,12 +523,7 @@ class tree final
     return maxBalance;
   }
 
-  //! Compute the surface area ratio of the tree.
-  /*! \return
-          The ratio of the sum of the node surface area to the surface
-          area of the root node.
-   */
-  double computeSurfaceAreaRatio() const
+  [[nodiscard]] auto computeSurfaceAreaRatio() const -> double
   {
     if (root == NULL_NODE) return 0.0;
 
@@ -591,31 +539,10 @@ class tree final
     return totalArea / rootArea;
   }
 
-  /// Validate the tree.
-  void validate() const
-  {
-#ifndef NDEBUG
-    validateStructure(root);
-    validateMetrics(root);
-
-    unsigned int freeCount = 0;
-    unsigned int freeIndex = freeList;
-
-    while (freeIndex != NULL_NODE) {
-      assert(freeIndex < nodeCapacity);
-      freeIndex = nodes[freeIndex].next;
-      freeCount++;
-    }
-
-    assert(getHeight() == computeHeight());
-    assert((nodeCount + freeCount) == nodeCapacity);
-#endif
-  }
-
   /// Rebuild an optimal tree.
   void rebuild()
   {
-    std::vector<unsigned int> nodeIndices(nodeCount);
+    std::vector<index_type> nodeIndices(nodeCount);
     unsigned int count = 0;
 
     for (unsigned int i = 0; i < nodeCapacity; i++) {
@@ -675,6 +602,47 @@ class tree final
     validate();
   }
 
+  void validate() const
+  {
+#ifndef NDEBUG
+    validateStructure(root);
+    validateMetrics(root);
+
+    unsigned int freeCount = 0;
+    unsigned int freeIndex = freeList;
+
+    while (freeIndex != NULL_NODE) {
+      assert(freeIndex < nodeCapacity);
+      freeIndex = nodes[freeIndex].next;
+      freeCount++;
+    }
+
+    assert(getHeight() == computeHeight());
+    assert((nodeCount + freeCount) == nodeCapacity);
+#endif
+  }
+
+  [[nodiscard]] auto getAABB(const key_type& particle) const -> const aabb_type&
+  {
+    return nodes[particleMap[particle]].aabb;
+  }
+
+  [[nodiscard]] auto getHeight() const -> unsigned int
+  {
+    if (root == NULL_NODE) return 0;
+    return nodes[root].height;
+  }
+
+  [[nodiscard]] auto getNodeCount() const noexcept -> unsigned int
+  {
+    return nodeCount;
+  }
+
+  [[nodiscard]] auto nParticles() const noexcept -> size_type
+  {
+    return particleMap.size();
+  }
+
  private:
   /// The index of the root node.
   unsigned int root;
@@ -692,7 +660,7 @@ class tree final
   unsigned int freeList;
 
   /// The dimensionality of the system.
-  unsigned int dimension;
+  size_type dimension;
 
   /// The skin thickness of the fattened AABBs, as a fraction of the AABB base
   /// length.
@@ -704,11 +672,7 @@ class tree final
   /// Does touching count as overlapping in tree queries?
   bool touchIsOverlap;
 
-  //! Allocate a new node.
-  /*! \return
-          The index of the allocated node.
-   */
-  unsigned int allocateNode()
+  [[nodiscard]] auto allocateNode() -> index_type
   {
     // Exand the node pool as needed.
     if (freeList == NULL_NODE) {
@@ -731,7 +695,7 @@ class tree final
     }
 
     // Peel a node off the free list.
-    unsigned int node = freeList;
+    const auto node = freeList;
     freeList = nodes[node].next;
     nodes[node].parent = NULL_NODE;
     nodes[node].left = NULL_NODE;
@@ -747,7 +711,7 @@ class tree final
   /*! \param node
           The index of the node to be freed.
    */
-  void freeNode(unsigned int node)
+  void freeNode(index_type node)
   {
     assert(node < nodeCapacity);
     assert(0 < nodeCount);
@@ -758,11 +722,7 @@ class tree final
     nodeCount--;
   }
 
-  //! Insert a leaf into the tree.
-  /*! \param leaf
-          The index of the leaf node.
-   */
-  void insertLeaf(unsigned int leaf)
+  void insertLeaf(index_type leaf)
   {
     if (root == NULL_NODE) {
       root = leaf;
@@ -879,11 +839,7 @@ class tree final
     }
   }
 
-  //! Remove a leaf from the tree.
-  /*! \param leaf
-          The index of the leaf node.
-   */
-  void removeLeaf(unsigned int leaf)
+  void removeLeaf(index_type leaf)
   {
     if (leaf == root) {
       root = NULL_NODE;
@@ -930,11 +886,7 @@ class tree final
     }
   }
 
-  //! Balance the tree.
-  /*! \param node
-          The index of the node.
-   */
-  unsigned int balance(unsigned int node)
+  unsigned int balance(index_type node)
   {
     assert(node != NULL_NODE);
 
@@ -1055,23 +1007,12 @@ class tree final
     return node;
   }
 
-  //! Compute the height of the tree.
-  /*! \return
-          The height of the entire tree.
-   */
-  unsigned int computeHeight() const
+  [[nodiscard]] auto computeHeight() const -> size_type
   {
     return computeHeight(root);
   }
 
-  //! Compute the height of a sub-tree.
-  /*! \param node
-          The index of the root node.
-
-      \return
-          The height of the sub-tree.
-   */
-  unsigned int computeHeight(unsigned int node) const
+  [[nodiscard]] auto computeHeight(index_type node) const -> size_type
   {
     assert(node < nodeCapacity);
 
@@ -1087,7 +1028,7 @@ class tree final
   /*! \param node
           The index of the root node.
    */
-  void validateStructure(unsigned int node) const
+  void validateStructure(index_type node) const
   {
     if (node == NULL_NODE) return;
 
@@ -1117,7 +1058,7 @@ class tree final
   /*! \param node
           The index of the root node.
    */
-  void validateMetrics(unsigned int node) const
+  void validateMetrics(index_type node) const
   {
     if (node == NULL_NODE) return;
 

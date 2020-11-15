@@ -471,6 +471,76 @@ class tree final
     }
   }
 
+  /// Rebuild an optimal tree.
+  void rebuild()
+  {
+    std::vector<index_type> nodeIndices(m_nodeCount);
+    int count{0};
+
+    for (auto index = 0; index < m_nodeCapacity; ++index) {
+      if (m_nodes.at(index).height < 0) {  // Free node.
+        continue;
+      }
+
+      if (m_nodes.at(index).is_leaf()) {
+        m_nodes.at(index).parent = std::nullopt;
+        nodeIndices.at(count) = index;
+        ++count;
+      } else {
+        free_node(index);
+      }
+    }
+
+    while (count > 1) {
+      auto minCost = std::numeric_limits<double>::max();
+      int iMin{-1};
+      int jMin{-1};
+
+      for (auto i = 0; i < count; ++i) {
+        const auto fstAabb = m_nodes.at(nodeIndices.at(i)).aabb;
+
+        for (auto j = (i + 1); j < count; ++j) {
+          const auto sndAabb = m_nodes.at(nodeIndices.at(j)).aabb;
+          const auto cost = aabb_type::merge(fstAabb, sndAabb).area();
+
+          if (cost < minCost) {
+            iMin = i;
+            jMin = j;
+            minCost = cost;
+          }
+        }
+      }
+
+      const auto index1 = nodeIndices.at(iMin);
+      const auto index2 = nodeIndices.at(jMin);
+
+      const auto parentIndex = allocate_node();
+      auto& parentNode = m_nodes.at(parentIndex);
+
+      auto& index1Node = m_nodes.at(index1);
+      auto& index2Node = m_nodes.at(index2);
+
+      parentNode.left = index1;
+      parentNode.right = index2;
+      parentNode.height = 1 + std::max(index1Node.height, index2Node.height);
+      parentNode.aabb = aabb_type::merge(index1Node.aabb, index2Node.aabb);
+      parentNode.parent = std::nullopt;
+
+      index1Node.parent = parentIndex;
+      index2Node.parent = parentIndex;
+
+      nodeIndices.at(jMin) = nodeIndices.at(count - 1);
+      nodeIndices.at(iMin) = parentIndex;
+      --count;
+    }
+
+    m_root = nodeIndices.at(0);
+
+#ifndef NDEBUG
+    validate();
+#endif
+  }
+
   void set_thickness_factor(std::optional<double> thicknessFactor)
   {
     if (thicknessFactor) {
@@ -583,72 +653,6 @@ class tree final
 
     return totalArea / rootArea;
   }
-
-  //  /// Rebuild an optimal tree.
-  //  void rebuild()
-  //  {
-  //    std::vector<index_type> nodeIndices(m_nodeCount);
-  //    int count{0};
-  //
-  //    for (auto i = 0; i < m_nodeCapacity; ++i) {
-  //      if (m_nodes[i].height < 0) {  // Free node.
-  //        continue;
-  //      }
-  //
-  //      if (m_nodes[i].is_leaf()) {
-  //        m_nodes[i].parent = std::nullopt;
-  //        nodeIndices[count] = i;
-  //        count++;
-  //      } else {
-  //        freeNode(i);
-  //      }
-  //    }
-  //
-  //    while (count > 1) {
-  //      auto minCost = std::numeric_limits<double>::max();
-  //      int iMin{-1};
-  //      int jMin{-1};
-  //
-  //      for (auto i = 0; i < count; ++i) {
-  //        aabb_type aabbi = m_nodes[nodeIndices[i]].aabb;
-  //
-  //        for (auto j = i + 1; j < count; ++j) {
-  //          aabb_type aabbj = m_nodes[nodeIndices[j]].aabb;
-  //          aabb_type aabb;
-  //          aabb.merge(aabbi, aabbj);
-  //          const auto cost = aabb.area();
-  //
-  //          if (cost < minCost) {
-  //            iMin = i;
-  //            jMin = j;
-  //            minCost = cost;
-  //          }
-  //        }
-  //      }
-  //
-  //      const auto index1 = nodeIndices[iMin];
-  //      const auto index2 = nodeIndices[jMin];
-  //
-  //      unsigned int parent = allocateNode();
-  //      m_nodes[parent].left = index1;
-  //      m_nodes[parent].right = index2;
-  //      m_nodes[parent].height =
-  //          1 + std::max(m_nodes[index1].height, m_nodes[index2].height);
-  //      m_nodes[parent].aabb.merge(m_nodes[index1].aabb,
-  //      m_nodes[index2].aabb); m_nodes[parent].parent = std::nullopt;
-  //
-  //      m_nodes[index1].parent = parent;
-  //      m_nodes[index2].parent = parent;
-  //
-  //      nodeIndices[jMin] = nodeIndices[count - 1];
-  //      nodeIndices[iMin] = parent;
-  //      count--;
-  //    }
-  //
-  //    m_root = nodeIndices[0];
-  //
-  //    validate();
-  //  }
 
   void validate() const
   {

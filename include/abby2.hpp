@@ -404,8 +404,7 @@ class tree final
   void clear()
   {
     // Iterator pointing to the start of the particle map.
-    std::unordered_map<unsigned int, unsigned int>::iterator it =
-        m_indexMap.begin();
+    const auto it = m_indexMap.begin();
 
     // Iterate over the map.
     while (it != m_indexMap.end()) {

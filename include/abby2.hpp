@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>      // min, max
+#include <algorithm>      // min, max, clamp
 #include <cassert>        // assert
 #include <cmath>          // abs
 #include <limits>         // numeric_limits
@@ -45,6 +45,86 @@ struct vector2 final
   }
 };
 
+/**
+ * \brief Adds two vectors and returns the result.
+ *
+ * \tparam T the representation type used by the vectors.
+ *
+ * \param lhs the left-hand side vector.
+ * \param rhs the right-hand side vector.
+ *
+ * \return a vector that is the result of adding the components of the two
+ * vectors.
+ *
+ * \since 0.1.0
+ */
+template <typename T>
+[[nodiscard]] constexpr auto operator+(const vector2<T>& lhs,
+                                       const vector2<T>& rhs) noexcept
+    -> vector2<T>
+{
+  return {lhs.x + rhs.x, lhs.y + rhs.y};
+}
+
+/**
+ * \brief Subtracts two vectors and returns the result.
+ *
+ * \tparam T the representation type used by the vectors.
+ *
+ * \param lhs the left-hand side vector.
+ * \param rhs the right-hand side vector.
+ *
+ * \return a vector that is the result of subtracting the components of the two
+ * vectors.
+ *
+ * \since 0.1.0
+ */
+template <typename T>
+[[nodiscard]] constexpr auto operator-(const vector2<T>& lhs,
+                                       const vector2<T>& rhs) noexcept
+    -> vector2<T>
+{
+  return {lhs.x - rhs.x, lhs.y - rhs.y};
+}
+
+/**
+ * \brief Indicates whether or not two vectors are equal.
+ *
+ * \tparam T the representation type used by the vectors.
+ *
+ * \param lhs the left-hand side vector.
+ * \param rhs the right-hand side vector.
+ *
+ * \return `true` if the two vectors are equal; `false` otherwise.
+ *
+ * \since 0.1.0
+ */
+template <typename T>
+[[nodiscard]] constexpr auto operator==(const vector2<T>& lhs,
+                                        const vector2<T>& rhs) noexcept -> bool
+{
+  return (lhs.x == rhs.x) && (lhs.y == rhs.y);
+}
+
+/**
+ * \brief Indicates whether or not two vectors aren't equal.
+ *
+ * \tparam T the representation type used by the vectors.
+ *
+ * \param lhs the left-hand side vector.
+ * \param rhs the right-hand side vector.
+ *
+ * \return `true` if the two vectors aren't equal; `false` otherwise.
+ *
+ * \since 0.1.0
+ */
+template <typename T>
+[[nodiscard]] constexpr auto operator!=(const vector2<T>& lhs,
+                                        const vector2<T>& rhs) noexcept -> bool
+{
+  return !(lhs == rhs);
+}
+
 template <typename T>
 class aabb final
 {
@@ -61,6 +141,44 @@ class aabb final
     if ((m_min.x > m_max.x) || (m_min.y > m_max.y)) {
       throw std::invalid_argument("AABB: min > max");
     }
+  }
+
+  constexpr void fatten(const std::optional<double> factor)
+  {
+    if (!factor) {
+      return;
+    }
+
+    const auto size = m_max - m_min;
+    const auto dx = *factor * size.x;
+    const auto dy = *factor * size.y;
+
+    m_min.x -= dx;
+    m_min.y -= dy;
+
+    m_max.x += dx;
+    m_max.y += dy;
+
+    m_area = compute_area();
+    //    vector_type size;  // AABB size in each dimension.
+    //
+    //    // Compute the AABB limits.
+    //    for (auto i = 0; i < 2; ++i) {
+    //      // Validate the bound.
+    //      if (m_min[i] > m_max[i]) {
+    //        throw std::invalid_argument("aabb: lower bound > upper bound!");
+    //      }
+    //
+    //      node.aabb.m_min[i] = lowerBound[i];
+    //      node.aabb.m_max[i] = upperBound[i];
+    //      size[i] = upperBound[i] - lowerBound[i];
+    //    }
+    //
+    //    // Fatten the AABB.
+    //    for (auto i = 0; i < 2; ++i) {
+    //      node.aabb.m_min[i] -= (m_skinThickness * size[i]);
+    //      node.aabb.m_max[i] += (m_skinThickness * size[i]);
+    //    }
   }
 
   constexpr void merge(const aabb& fst, const aabb& snd)
@@ -216,53 +334,24 @@ class tree final
   }
 
   void insert(const key_type& id,
-              vector_type& lowerBound,
-              vector_type& upperBound)
+              const vector_type& lowerBound,
+              const vector_type& upperBound)
   {
-    // Make sure the particle doesn't already exist.
-    if (m_indexMap.count(id) != 0) {
-      throw std::invalid_argument("[ERROR]: Particle already exists in tree!");
-    }
+    // Make sure the particle doesn't already exist
+    assert(!m_indexMap.count(id));
 
-    // Allocate a new node for the particle.
-    unsigned int node = allocateNode();
+    // Allocate a new node for the particle
+    const auto nodeIndex = allocate_node();
+    auto& node = m_nodes.at(nodeIndex);
+    node.id = id;
+    node.aabb = {lowerBound, upperBound};
+    node.aabb.fatten(m_skinThickness);
+    node.height = 0;
+    // node.aabb.m_area = node.aabb.compute_area();
+    // m_nodes[node].aabb.m_centre = m_nodes[node].aabb.computeCentre();
 
-    // AABB size in each dimension.
-    vector_type size;
-
-    // Compute the AABB limits.
-    for (unsigned int i = 0; i < 2; i++) {
-      // Validate the bound.
-      if (lowerBound[i] > upperBound[i]) {
-        throw std::invalid_argument(
-            "[ERROR]: AABB lower bound is greater than the upper bound!");
-      }
-
-      m_nodes[node].aabb.m_min[i] = lowerBound[i];
-      m_nodes[node].aabb.m_max[i] = upperBound[i];
-      size[i] = upperBound[i] - lowerBound[i];
-    }
-
-    // Fatten the AABB.
-    for (unsigned int i = 0; i < 2; i++) {
-      m_nodes[node].aabb.m_min[i] -= m_skinThickness * size[i];
-      m_nodes[node].aabb.m_max[i] += m_skinThickness * size[i];
-    }
-    m_nodes[node].aabb.m_area = m_nodes[node].aabb.compute_area();
-    //    m_nodes[node].aabb.m_centre = m_nodes[node].aabb.computeCentre();
-
-    // Zero the height.
-    m_nodes[node].height = 0;
-
-    // Insert a new leaf into the tree.
-    insertLeaf(node);
-
-    // Add the new particle to the map.
-    m_indexMap.insert(
-        std::unordered_map<unsigned int, unsigned int>::value_type(id, node));
-
-    // Store the particle index.
-    m_nodes[node].id = id;
+    insert_leaf(nodeIndex);
+    m_indexMap.emplace(id, nodeIndex);
 
 #ifndef NDEBUG
     validate();
@@ -397,7 +486,7 @@ class tree final
     //    m_nodes[node].aabb.m_centre = m_nodes[node].aabb.computeCentre();
 
     // Insert a new leaf node.
-    insertLeaf(node);
+    insert_leaf(node);
 
 #ifndef NDEBUG
     validate();
@@ -406,9 +495,13 @@ class tree final
     return true;
   }
 
-  void set_thickness_factor(double thicknessFactor)
+  void set_thickness_factor(std::optional<double> thicknessFactor)
   {
-    m_skinThickness = std::clamp(thicknessFactor, 0.0, thicknessFactor);
+    if (thicknessFactor) {
+      m_skinThickness = std::clamp(*thicknessFactor, 0.0, *thicknessFactor);
+    } else {
+      m_skinThickness = std::nullopt;
+    }
   }
 
   [[nodiscard]] auto query(const key_type& id) const -> std::vector<key_type>
@@ -624,6 +717,11 @@ class tree final
     return m_indexMap.size();
   }
 
+  [[nodiscard]] auto thickness_factor() const noexcept -> std::optional<double>
+  {
+    return m_skinThickness;
+  }
+
  private:
   std::vector<node_type> m_nodes;
   std::unordered_map<key_type, index_type> m_indexMap;
@@ -634,7 +732,7 @@ class tree final
   size_type m_nodeCount{0};  ///< Number of m_nodes in the tree.
   size_type m_nodeCapacity;  ///< Current node capacity.
 
-  double m_skinThickness{0.05};
+  std::optional<double> m_skinThickness{0.05};
 
   /// Does touching count as overlapping in tree queries?
   bool m_touchIsOverlap{true};
@@ -694,7 +792,7 @@ class tree final
     m_nextFreeIndex = static_cast<index_type>(m_nodeCount);
   }
 
-  [[nodiscard]] auto allocateNode() -> index_type
+  [[nodiscard]] auto allocate_node() -> index_type
   {
     if (m_nextFreeIndex == std::nullopt) {
       grow_pool();
@@ -730,7 +828,7 @@ class tree final
     m_nodeCount--;
   }
 
-  void insertLeaf(index_type leaf)
+  void insert_leaf(index_type leaf)
   {
     if (m_root == std::nullopt) {
       m_root = leaf;
@@ -805,7 +903,7 @@ class tree final
 
     // Create a new parent.
     const auto oldParent = m_nodes[sibling].parent;
-    const auto newParent = allocateNode();
+    const auto newParent = allocate_node();
     m_nodes[newParent].parent = oldParent;
     m_nodes[newParent].aabb.merge(leafAABB, m_nodes[sibling].aabb);
     m_nodes[newParent].height = m_nodes[sibling].height + 1;

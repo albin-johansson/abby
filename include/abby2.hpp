@@ -13,7 +13,8 @@
 #include <vector>         // vector
 
 namespace abby2 {
-const unsigned int NULL_NODE = 0xffffffff;
+
+using maybe_index = std::optional<unsigned int>;
 
 template <typename T>
 struct vector2 final
@@ -173,24 +174,21 @@ class aabb final
 template <typename Key, typename T>
 struct node final
 {
-  // TODO optional indices and ID
-
   using key_type = Key;
   using aabb_type = aabb<T>;
-  using index_type = unsigned int;
 
-  key_type id;
+  std::optional<key_type> id;
   aabb_type aabb;
 
-  index_type parent;
-  index_type next;
-  index_type left;
-  index_type right;
-  int height;
+  maybe_index parent;
+  maybe_index next;
+  maybe_index left;
+  maybe_index right;
+  int height{-1};
 
   [[nodiscard]] auto is_leaf() const noexcept -> bool
   {
-    return (left == NULL_NODE);
+    return left == std::nullopt;
   }
 };
 
@@ -205,7 +203,6 @@ class tree final
   using node_type = node<key_type, value_type>;
   using size_type = std::size_t;
   using index_type = unsigned int;
-  using maybe_index = std::optional<index_type>;
 
   [[deprecated]] explicit tree(double skinThickness = 0.05,
                                size_type nParticles = 16,
@@ -214,18 +211,20 @@ class tree final
         m_touchIsOverlap{touchIsOverlap}
   {
     // Initialise the tree.
-    m_root = NULL_NODE;
+    m_root = std::nullopt;
     m_nodeCount = 0;
     m_nodeCapacity = nParticles;
-    m_nodes.resize(m_nodeCapacity);
 
-    // Build a linked list for the list of free nodes.
-    for (auto i = 0; i < m_nodeCapacity - 1; i++) {
-      m_nodes[i].next = i + 1;
-      m_nodes[i].height = -1;
-    }
-    m_nodes[m_nodeCapacity - 1].next = NULL_NODE;
-    m_nodes[m_nodeCapacity - 1].height = -1;
+    resize_to_match_node_capacity(0);
+    //    m_nodes.resize(m_nodeCapacity);
+    //
+    //    // Build a linked list for the list of free nodes.
+    //    for (auto i = 0; i < m_nodeCapacity - 1; i++) {
+    //      m_nodes[i].next = i + 1;
+    //      m_nodes[i].height = -1;
+    //    }
+    //    m_nodes[m_nodeCapacity - 1].next = std::nullopt;
+    //    m_nodes[m_nodeCapacity - 1].height = -1;
 
     // Assign the index of the first free node.
     m_nextFreeIndex = 0;
@@ -349,26 +348,6 @@ class tree final
     print(stream, "", m_root, false);
   }
 
-  void print(std::ostream& stream,
-             const std::string& prefix,
-             index_type index,
-             bool isLeft) const
-  {
-    if (index != NULL_NODE) {
-      const auto& node = m_nodes.at(index);
-
-      stream << prefix << (isLeft ? "├── " : "└── ");
-      if (node.is_leaf()) {
-        stream << node.id << "\n";
-      } else {
-        stream << "X\n";
-      }
-
-      print(stream, prefix + (isLeft ? "│   " : "    "), node.left, true);
-      print(stream, prefix + (isLeft ? "│   " : "    "), node.right, false);
-    }
-  }
-
   auto update(const key_type& id,
               vector_type& lowerBound,
               vector_type& upperBound,
@@ -453,52 +432,55 @@ class tree final
     return query(id, m_nodes[m_indexMap.find(id)->second].aabb);
   }
 
-  [[nodiscard]] auto query(const key_type& id, const aabb_type& aabb) const
-      -> std::vector<key_type>
-  {
-    std::vector<index_type> stack;
-    stack.reserve(256);
-    stack.push_back(m_root);
-
-    std::vector<key_type> particles;
-
-    while (stack.size() > 0) {
-      const auto node = stack.back();
-      stack.pop_back();
-
-      // Copy the AABB.
-      aabb_type nodeAABB = m_nodes[node].aabb;
-
-      if (node == NULL_NODE) continue;
-
-      // Test for overlap between the AABBs.
-      if (aabb.overlaps(nodeAABB, m_touchIsOverlap)) {
-        // Check that we're at a leaf node.
-        if (m_nodes[node].is_leaf()) {
-          // Can't interact with itself.
-          if (m_nodes[node].id != id) {
-            particles.push_back(m_nodes[node].id);
-          }
-        } else {
-          stack.push_back(m_nodes[node].left);
-          stack.push_back(m_nodes[node].right);
-        }
-      }
-    }
-
-    return particles;
-  }
-
-  [[nodiscard]] auto query(const aabb_type& aabb) const -> std::vector<key_type>
-  {
-    // Make sure the tree isn't empty.
-    if (m_indexMap.size() == 0) {
-      return std::vector<unsigned int>();
-    }
-
-    // Test overlap of AABB against all particles.
-    return query(std::numeric_limits<unsigned int>::max(), aabb);
-  }
+  //  [[nodiscard]] auto query(const key_type& id, const aabb_type& aabb) const
+  //      -> std::vector<key_type>
+  //  {
+  //    std::vector<maybe_index> stack;
+  //    stack.reserve(256);
+  //    stack.push_back(m_root);
+  //
+  //    std::vector<key_type> particles;
+  //
+  //    while (!stack.empty()) {
+  //      const auto node = stack.back();
+  //      stack.pop_back();
+  //
+  //      if (node == std::nullopt) {
+  //        continue;
+  //      }
+  //
+  //      // Copy the AABB.
+  //      const auto nodeAABB = m_nodes[*node].aabb;
+  //
+  //      // Test for overlap between the AABBs.
+  //      if (aabb.overlaps(nodeAABB, m_touchIsOverlap)) {
+  //        // Check that we're at a leaf node.
+  //        if (m_nodes[*node].is_leaf()) {
+  //          // Can't interact with itself.
+  //          if (m_nodes[*node].id != id) {
+  //            particles.push_back(m_nodes[*node].id);
+  //          }
+  //        } else {
+  //          stack.push_back(m_nodes[*node].left);
+  //          stack.push_back(m_nodes[*node].right);
+  //        }
+  //      }
+  //    }
+  //
+  //    return particles;
+  //  }
+  //
+  //  [[nodiscard]] auto query(const aabb_type& aabb) const ->
+  //  std::vector<key_type>
+  //  {
+  //    // Make sure the tree isn't empty.
+  //    if (m_indexMap.size() == 0) {
+  //      return {};
+  //    }
+  //
+  //    // Test overlap of AABB against all particles.
+  //    return query(std::numeric_limits<unsigned int>::max(), aabb);
+  //  }
 
   [[nodiscard]] auto compute_maximum_balance() const -> size_type
   {
@@ -510,11 +492,11 @@ class tree final
       const auto& node = m_nodes.at(i);
       if (node.height > 2) {
         assert(!node.is_leaf());
-        assert(node.left != NULL_NODE);
-        assert(node.right != NULL_NODE);
+        assert(node.left != std::nullopt);
+        assert(node.right != std::nullopt);
 
-        const auto balance = std::abs(m_nodes.at(node.left).height -
-                                      m_nodes.at(node.right).height);
+        const auto balance = std::abs(m_nodes.at(*node.left).height -
+                                      m_nodes.at(*node.right).height);
         maxBalance = std::max(maxBalance, balance);
       }
     }
@@ -524,82 +506,89 @@ class tree final
 
   [[nodiscard]] auto computeSurfaceAreaRatio() const -> double
   {
-    if (m_root == NULL_NODE) return 0.0;
+    if (m_root == std::nullopt) {
+      return 0;
+    }
 
-    double rootArea = m_nodes[m_root].aabb.compute_area();
-    double totalArea = 0.0;
+    const auto rootArea = m_nodes.at(*m_root).aabb.compute_area();
+    double totalArea{};
 
-    for (unsigned int i = 0; i < m_nodeCapacity; i++) {
-      if (m_nodes[i].height < 0) continue;
-
-      totalArea += m_nodes[i].aabb.compute_area();
+    for (auto i = 0; i < m_nodeCapacity; ++i) {
+      const auto& node = m_nodes.at(i);
+      if (node.height < 0) {
+        continue;
+      }
+      totalArea += node.aabb.compute_area();
     }
 
     return totalArea / rootArea;
   }
 
-  /// Rebuild an optimal tree.
-  void rebuild()
-  {
-    std::vector<index_type> nodeIndices(m_nodeCount);
-    unsigned int count = 0;
-
-    for (unsigned int i = 0; i < m_nodeCapacity; i++) {
-      // Free node.
-      if (m_nodes[i].height < 0) continue;
-
-      if (m_nodes[i].is_leaf()) {
-        m_nodes[i].parent = NULL_NODE;
-        nodeIndices[count] = i;
-        count++;
-      } else
-        freeNode(i);
-    }
-
-    while (count > 1) {
-      double minCost = std::numeric_limits<double>::max();
-      int iMin = -1, jMin = -1;
-
-      for (unsigned int i = 0; i < count; i++) {
-        aabb_type aabbi = m_nodes[nodeIndices[i]].aabb;
-
-        for (unsigned int j = i + 1; j < count; j++) {
-          aabb_type aabbj = m_nodes[nodeIndices[j]].aabb;
-          aabb_type aabb;
-          aabb.merge(aabbi, aabbj);
-          double cost = aabb.area();
-
-          if (cost < minCost) {
-            iMin = i;
-            jMin = j;
-            minCost = cost;
-          }
-        }
-      }
-
-      unsigned int index1 = nodeIndices[iMin];
-      unsigned int index2 = nodeIndices[jMin];
-
-      unsigned int parent = allocateNode();
-      m_nodes[parent].left = index1;
-      m_nodes[parent].right = index2;
-      m_nodes[parent].height =
-          1 + std::max(m_nodes[index1].height, m_nodes[index2].height);
-      m_nodes[parent].aabb.merge(m_nodes[index1].aabb, m_nodes[index2].aabb);
-      m_nodes[parent].parent = NULL_NODE;
-
-      m_nodes[index1].parent = parent;
-      m_nodes[index2].parent = parent;
-
-      nodeIndices[jMin] = nodeIndices[count - 1];
-      nodeIndices[iMin] = parent;
-      count--;
-    }
-
-    m_root = nodeIndices[0];
-
-    validate();
-  }
+  //  /// Rebuild an optimal tree.
+  //  void rebuild()
+  //  {
+  //    std::vector<index_type> nodeIndices(m_nodeCount);
+  //    int count{0};
+  //
+  //    for (auto i = 0; i < m_nodeCapacity; ++i) {
+  //      if (m_nodes[i].height < 0) {  // Free node.
+  //        continue;
+  //      }
+  //
+  //      if (m_nodes[i].is_leaf()) {
+  //        m_nodes[i].parent = std::nullopt;
+  //        nodeIndices[count] = i;
+  //        count++;
+  //      } else {
+  //        freeNode(i);
+  //      }
+  //    }
+  //
+  //    while (count > 1) {
+  //      auto minCost = std::numeric_limits<double>::max();
+  //      int iMin{-1};
+  //      int jMin{-1};
+  //
+  //      for (auto i = 0; i < count; ++i) {
+  //        aabb_type aabbi = m_nodes[nodeIndices[i]].aabb;
+  //
+  //        for (auto j = i + 1; j < count; ++j) {
+  //          aabb_type aabbj = m_nodes[nodeIndices[j]].aabb;
+  //          aabb_type aabb;
+  //          aabb.merge(aabbi, aabbj);
+  //          const auto cost = aabb.area();
+  //
+  //          if (cost < minCost) {
+  //            iMin = i;
+  //            jMin = j;
+  //            minCost = cost;
+  //          }
+  //        }
+  //      }
+  //
+  //      const auto index1 = nodeIndices[iMin];
+  //      const auto index2 = nodeIndices[jMin];
+  //
+  //      unsigned int parent = allocateNode();
+  //      m_nodes[parent].left = index1;
+  //      m_nodes[parent].right = index2;
+  //      m_nodes[parent].height =
+  //          1 + std::max(m_nodes[index1].height, m_nodes[index2].height);
+  //      m_nodes[parent].aabb.merge(m_nodes[index1].aabb,
+  //      m_nodes[index2].aabb); m_nodes[parent].parent = std::nullopt;
+  //
+  //      m_nodes[index1].parent = parent;
+  //      m_nodes[index2].parent = parent;
+  //
+  //      nodeIndices[jMin] = nodeIndices[count - 1];
+  //      nodeIndices[iMin] = parent;
+  //      count--;
+  //    }
+  //
+  //    m_root = nodeIndices[0];
+  //
+  //    validate();
+  //  }
 
   void validate() const
   {
@@ -607,12 +596,12 @@ class tree final
     validateStructure(m_root);
     validateMetrics(m_root);
 
-    unsigned int freeCount = 0;
-    unsigned int freeIndex = m_nextFreeIndex;
+    auto freeCount = 0;
+    auto freeIndex = m_nextFreeIndex;
 
-    while (freeIndex != NULL_NODE) {
+    while (freeIndex != std::nullopt) {
       assert(freeIndex < m_nodeCapacity);
-      freeIndex = m_nodes[freeIndex].next;
+      freeIndex = m_nodes[*freeIndex].next;
       freeCount++;
     }
 
@@ -623,21 +612,24 @@ class tree final
 
   [[nodiscard]] auto get_aabb(const key_type& id) const -> const aabb_type&
   {
-    return m_nodes[m_indexMap[id]].aabb;
+    return m_nodes.at(m_indexMap.at(id)).aabb;
   }
 
-  [[nodiscard]] auto height() const -> unsigned int
+  [[nodiscard]] auto height() const -> int
   {
-    if (m_root == NULL_NODE) return 0;
-    return m_nodes[m_root].height;
+    if (m_root == std::nullopt) {
+      return 0;
+    } else {
+      return m_nodes.at(*m_root).height;
+    }
   }
 
-  [[nodiscard]] auto getNodeCount() const noexcept -> unsigned int
+  [[nodiscard]] auto node_count() const noexcept -> unsigned int
   {
     return m_nodeCount;
   }
 
-  [[nodiscard]] auto nParticles() const noexcept -> size_type
+  [[nodiscard]] auto size() const noexcept -> size_type
   {
     return m_indexMap.size();
   }
@@ -646,8 +638,8 @@ class tree final
   std::vector<node_type> m_nodes;
   std::unordered_map<key_type, index_type> m_indexMap;
 
-  index_type m_root{NULL_NODE};   ///< Root node index
-  index_type m_nextFreeIndex{0};  ///< Index of next free node
+  maybe_index m_root;              ///< Root node index
+  maybe_index m_nextFreeIndex{0};  ///< Index of next free node
 
   size_type m_nodeCount{0};  ///< Number of m_nodes in the tree.
   size_type m_nodeCapacity;  ///< Current node capacity.
@@ -657,39 +649,80 @@ class tree final
   /// Does touching count as overlapping in tree queries?
   bool m_touchIsOverlap;
 
+  void print(std::ostream& stream,
+             const std::string& prefix,
+             maybe_index index,
+             bool isLeft) const
+  {
+    if (index != std::nullopt) {
+      const auto& node = m_nodes.at(*index);
+
+      stream << prefix << (isLeft ? "├── " : "└── ");
+      if (node.is_leaf()) {
+        stream << node.id.value() << "\n";
+      } else {
+        stream << "X\n";
+      }
+
+      print(stream, prefix + (isLeft ? "│   " : "    "), node.left, true);
+      print(stream, prefix + (isLeft ? "│   " : "    "), node.right, false);
+    }
+  }
+
+  /**
+   * \brief Resizes the node vector.
+   *
+   * \param beginInitIndex the index at which the function will start to
+   * initialize the `next` and `height` members of the new nodes.
+   * \param size the new size of the node vector.
+   *
+   * \since 0.2.0
+   */
+  void resize_to_match_node_capacity(const size_type beginInitIndex)
+  {
+    m_nodes.resize(m_nodeCapacity);
+    for (auto i = beginInitIndex; i < (m_nodeCapacity - 1); ++i) {
+      auto& node = m_nodes.at(i);
+      node.next = static_cast<index_type>(i) + 1;
+      node.height = -1;
+    }
+
+    auto& node = m_nodes.at(m_nodeCapacity - 1);
+    node.next = std::nullopt;
+    node.height = -1;
+  }
+
+  void grow_pool()
+  {
+    assert(m_nodeCount == m_nodeCapacity);
+
+    // The free list is empty. Rebuild a bigger pool.
+    m_nodeCapacity *= 2;
+    resize_to_match_node_capacity(m_nodeCount);
+
+    // Assign the index of the first free node.
+    m_nextFreeIndex = static_cast<index_type>(m_nodeCount);
+  }
+
   [[nodiscard]] auto allocateNode() -> index_type
   {
-    // Exand the node pool as needed.
-    if (m_nextFreeIndex == NULL_NODE) {
-      assert(m_nodeCount == m_nodeCapacity);
-
-      // The free list is empty. Rebuild a bigger pool.
-      m_nodeCapacity *= 2;
-      m_nodes.resize(m_nodeCapacity);
-
-      // Build a linked list for the list of free m_nodes.
-      for (unsigned int i = m_nodeCount; i < m_nodeCapacity - 1; i++) {
-        m_nodes[i].next = i + 1;
-        m_nodes[i].height = -1;
-      }
-      m_nodes[m_nodeCapacity - 1].next = NULL_NODE;
-      m_nodes[m_nodeCapacity - 1].height = -1;
-
-      // Assign the index of the first free node.
-      m_nextFreeIndex = m_nodeCount;
+    if (m_nextFreeIndex == std::nullopt) {
+      grow_pool();
     }
 
     // Peel a node off the free list.
-    const auto node = m_nextFreeIndex;
-    m_nextFreeIndex = m_nodes[node].next;
-    m_nodes[node].parent = NULL_NODE;
-    m_nodes[node].left = NULL_NODE;
-    m_nodes[node].right = NULL_NODE;
-    m_nodes[node].height = 0;
-    //    m_nodes[node].aabb.set_dimension(dimension);
-    m_nodeCount++;
+    const auto nodeIndex = m_nextFreeIndex.value();
+    auto& node = m_nodes.at(nodeIndex);
 
-    return node;
+    m_nextFreeIndex = node.next;
+    node.parent = std::nullopt;
+    node.left = std::nullopt;
+    node.right = std::nullopt;
+    node.height = 0;
+    // node.aabb.set_dimension(dimension);
+    ++m_nodeCount;
+
+    return nodeIndex;
   }
 
   //! Free an existing node.
@@ -709,33 +742,33 @@ class tree final
 
   void insertLeaf(index_type leaf)
   {
-    if (m_root == NULL_NODE) {
+    if (m_root == std::nullopt) {
       m_root = leaf;
-      m_nodes[m_root].parent = NULL_NODE;
+      m_nodes[*m_root].parent = std::nullopt;
       return;
     }
 
     // Find the best sibling for the node.
 
     const aabb_type leafAABB = m_nodes[leaf].aabb;
-    unsigned int index = m_root;
+    auto index = m_root;
 
-    while (!m_nodes[index].is_leaf()) {
+    while (!m_nodes[*index].is_leaf()) {
       // Extract the children of the node.
-      unsigned int left = m_nodes[index].left;
-      unsigned int right = m_nodes[index].right;
+      const auto left = m_nodes[*index].left.value();
+      const auto right = m_nodes[*index].right.value();
 
-      double surfaceArea = m_nodes[index].aabb.area();
+      const auto surfaceArea = m_nodes[*index].aabb.area();
 
       aabb_type combinedAABB;
-      combinedAABB.merge(m_nodes[index].aabb, leafAABB);
-      double combinedSurfaceArea = combinedAABB.area();
+      combinedAABB.merge(m_nodes[*index].aabb, leafAABB);
+      const auto combinedSurfaceArea = combinedAABB.area();
 
       // Cost of creating a new parent for this node and the new leaf.
-      double cost = 2.0 * combinedSurfaceArea;
+      const auto cost = 2.0 * combinedSurfaceArea;
 
       // Minimum cost of pushing the leaf further down the tree.
-      double inheritanceCost = 2.0 * (combinedSurfaceArea - surfaceArea);
+      const auto inheritanceCost = 2.0 * (combinedSurfaceArea - surfaceArea);
 
       // Cost of descending to the left.
       double costLeft;
@@ -766,38 +799,39 @@ class tree final
       }
 
       // Descend according to the minimum cost.
-      if ((cost < costLeft) && (cost < costRight)) break;
+      if ((cost < costLeft) && (cost < costRight)) {
+        break;
+      }
 
       // Descend.
-      if (costLeft < costRight)
+      if (costLeft < costRight) {
         index = left;
-      else
+      } else {
         index = right;
+      }
     }
 
-    unsigned int sibling = index;
+    const auto sibling = index.value();
 
     // Create a new parent.
-    unsigned int oldParent = m_nodes[sibling].parent;
-    unsigned int newParent = allocateNode();
+    const auto oldParent = m_nodes[sibling].parent;
+    const auto newParent = allocateNode();
     m_nodes[newParent].parent = oldParent;
     m_nodes[newParent].aabb.merge(leafAABB, m_nodes[sibling].aabb);
     m_nodes[newParent].height = m_nodes[sibling].height + 1;
 
-    // The sibling was not the root.
-    if (oldParent != NULL_NODE) {
-      if (m_nodes[oldParent].left == sibling)
-        m_nodes[oldParent].left = newParent;
-      else
-        m_nodes[oldParent].right = newParent;
+    if (oldParent != std::nullopt) {  // The sibling was not the root.
+      if (m_nodes[*oldParent].left == sibling) {
+        m_nodes[*oldParent].left = newParent;
+      } else {
+        m_nodes[*oldParent].right = newParent;
+      }
 
       m_nodes[newParent].left = sibling;
       m_nodes[newParent].right = leaf;
       m_nodes[sibling].parent = newParent;
       m_nodes[leaf].parent = newParent;
-    }
-    // The sibling was the root.
-    else {
+    } else {  // The sibling was the root.
       m_nodes[newParent].left = sibling;
       m_nodes[newParent].right = leaf;
       m_nodes[sibling].parent = newParent;
@@ -807,88 +841,89 @@ class tree final
 
     // Walk back up the tree fixing heights and AABBs.
     index = m_nodes[leaf].parent;
-    while (index != NULL_NODE) {
-      index = balance(index);
+    while (index != std::nullopt) {
+      index = balance(*index);
 
-      unsigned int left = m_nodes[index].left;
-      unsigned int right = m_nodes[index].right;
+      const auto left = m_nodes[*index].left.value();
+      const auto right = m_nodes[*index].right.value();
 
-      assert(left != NULL_NODE);
-      assert(right != NULL_NODE);
-
-      m_nodes[index].height =
+      m_nodes[*index].height =
           1 + std::max(m_nodes[left].height, m_nodes[right].height);
-      m_nodes[index].aabb.merge(m_nodes[left].aabb, m_nodes[right].aabb);
+      m_nodes[*index].aabb.merge(m_nodes[left].aabb, m_nodes[right].aabb);
 
-      index = m_nodes[index].parent;
+      index = m_nodes[*index].parent;
     }
   }
 
   void removeLeaf(index_type leaf)
   {
     if (leaf == m_root) {
-      m_root = NULL_NODE;
+      m_root = std::nullopt;
       return;
     }
 
-    unsigned int parent = m_nodes[leaf].parent;
-    unsigned int grandParent = m_nodes[parent].parent;
-    unsigned int sibling;
+    const auto parent = m_nodes[leaf].parent;
+    const auto grandParent = m_nodes[parent].parent;
+    maybe_index sibling;
 
-    if (m_nodes[parent].left == leaf)
+    if (m_nodes[parent].left == leaf) {
       sibling = m_nodes[parent].right;
-    else
+    } else {
       sibling = m_nodes[parent].left;
+    }
 
     // Destroy the parent and connect the sibling to the grandparent.
-    if (grandParent != NULL_NODE) {
-      if (m_nodes[grandParent].left == parent)
-        m_nodes[grandParent].left = sibling;
-      else
-        m_nodes[grandParent].right = sibling;
+    if (grandParent != std::nullopt) {
+      if (m_nodes[*grandParent].left == parent) {
+        m_nodes[*grandParent].left = sibling;
+      } else {
+        m_nodes[*grandParent].right = sibling;
+      }
 
-      m_nodes[sibling].parent = grandParent;
+      m_nodes[*sibling].parent = grandParent;
       freeNode(parent);
 
       // Adjust ancestor bounds.
-      unsigned int index = grandParent;
-      while (index != NULL_NODE) {
-        index = balance(index);
+      auto index = grandParent;
+      while (index != std::nullopt) {
+        index = balance(*index);
 
-        unsigned int left = m_nodes[index].left;
-        unsigned int right = m_nodes[index].right;
+        const auto left = m_nodes[*index].left;
+        const auto right = m_nodes[*index].right;
 
-        m_nodes[index].aabb.merge(m_nodes[left].aabb, m_nodes[right].aabb);
-        m_nodes[index].height =
-            1 + std::max(m_nodes[left].height, m_nodes[right].height);
+        m_nodes[*index].aabb.merge(m_nodes[*left].aabb, m_nodes[*right].aabb);
+        m_nodes[*index].height =
+            1 + std::max(m_nodes[*left].height, m_nodes[*right].height);
 
-        index = m_nodes[index].parent;
+        index = m_nodes[*index].parent;
       }
     } else {
       m_root = sibling;
-      m_nodes[sibling].parent = NULL_NODE;
+      m_nodes[*sibling].parent = std::nullopt;
       freeNode(parent);
     }
   }
 
-  unsigned int balance(index_type node)
+  auto balance(const index_type node) -> index_type
   {
-    assert(node != NULL_NODE);
+    //    assert(node != std::nullopt);
 
-    if (m_nodes[node].is_leaf() || (m_nodes[node].height < 2)) return node;
+    if (m_nodes[node].is_leaf() || (m_nodes[node].height < 2)) {
+      return node;
+    }
 
-    unsigned int left = m_nodes[node].left;
-    unsigned int right = m_nodes[node].right;
+    const auto left = m_nodes[node].left.value();
+    const auto right = m_nodes[node].right.value();
 
     assert(left < m_nodeCapacity);
     assert(right < m_nodeCapacity);
 
-    int currentBalance = m_nodes[right].height - m_nodes[left].height;
+    const auto currentBalance = m_nodes[right].height - m_nodes[left].height;
 
     // Rotate right branch up.
     if (currentBalance > 1) {
-      unsigned int rightLeft = m_nodes[right].left;
-      unsigned int rightRight = m_nodes[right].right;
+      const auto rightLeft = m_nodes[right].left.value();
+      const auto rightRight = m_nodes[right].right.value();
 
       assert(rightLeft < m_nodeCapacity);
       assert(rightRight < m_nodeCapacity);
@@ -899,15 +934,16 @@ class tree final
       m_nodes[node].parent = right;
 
       // The node's old parent should now point to its right-hand child.
-      if (m_nodes[right].parent != NULL_NODE) {
-        if (m_nodes[m_nodes[right].parent].left == node)
-          m_nodes[m_nodes[right].parent].left = right;
-        else {
-          assert(m_nodes[m_nodes[right].parent].right == node);
-          m_nodes[m_nodes[right].parent].right = right;
+      if (m_nodes[right].parent != std::nullopt) {
+        if (m_nodes[*m_nodes[right].parent].left == node) {
+          m_nodes[*m_nodes[right].parent].left = right;
+        } else {
+          assert(m_nodes[*m_nodes[right].parent].right == node);
+          m_nodes[*m_nodes[right].parent].right = right;
         }
-      } else
+      } else {
         m_root = right;
+      }
 
       // Rotate.
       if (m_nodes[rightLeft].height > m_nodes[rightRight].height) {
@@ -939,8 +975,8 @@ class tree final
 
     // Rotate left branch up.
     if (currentBalance < -1) {
-      unsigned int leftLeft = m_nodes[left].left;
-      unsigned int leftRight = m_nodes[left].right;
+      const auto leftLeft = m_nodes[left].left.value();
+      const auto leftRight = m_nodes[left].right.value();
 
       assert(leftLeft < m_nodeCapacity);
       assert(leftRight < m_nodeCapacity);
@@ -951,15 +987,16 @@ class tree final
       m_nodes[node].parent = left;
 
       // The node's old parent should now point to its left-hand child.
-      if (m_nodes[left].parent != NULL_NODE) {
-        if (m_nodes[m_nodes[left].parent].left == node)
-          m_nodes[m_nodes[left].parent].left = left;
-        else {
-          assert(m_nodes[m_nodes[left].parent].right == node);
-          m_nodes[m_nodes[left].parent].right = left;
+      if (m_nodes[left].parent != std::nullopt) {
+        if (m_nodes[*m_nodes[left].parent].left == node) {
+          m_nodes[*m_nodes[left].parent].left = left;
+        } else {
+          assert(m_nodes[*m_nodes[left].parent].right == node);
+          m_nodes[*m_nodes[left].parent].right = left;
         }
-      } else
+      } else {
         m_root = left;
+      }
 
       // Rotate.
       if (m_nodes[leftLeft].height > m_nodes[leftRight].height) {
@@ -997,14 +1034,17 @@ class tree final
     return computeHeight(m_root);
   }
 
-  [[nodiscard]] auto computeHeight(index_type node) const -> size_type
+  [[nodiscard]] auto computeHeight(maybe_index node) const -> size_type
   {
     assert(node < m_nodeCapacity);
+    assert(node != std::nullopt);
 
-    if (m_nodes[node].is_leaf()) return 0;
+    if (m_nodes[*node].is_leaf()) {
+      return 0;
+    }
 
-    unsigned int height1 = computeHeight(m_nodes[node].left);
-    unsigned int height2 = computeHeight(m_nodes[node].right);
+    const auto height1 = computeHeight(m_nodes[*node].left);
+    const auto height2 = computeHeight(m_nodes[*node].right);
 
     return 1 + std::max(height1, height2);
   }
@@ -1013,69 +1053,77 @@ class tree final
   /*! \param node
           The index of the root node.
    */
-  void validateStructure(index_type node) const
+  void validateStructure(maybe_index node) const
   {
-    if (node == NULL_NODE) return;
-
-    if (node == m_root) assert(m_nodes[node].parent == NULL_NODE);
-
-    unsigned int left = m_nodes[node].left;
-    unsigned int right = m_nodes[node].right;
-
-    if (m_nodes[node].is_leaf()) {
-      assert(left == NULL_NODE);
-      assert(right == NULL_NODE);
-      assert(m_nodes[node].height == 0);
+    if (node == std::nullopt) {
       return;
     }
 
-    assert(left < m_nodeCapacity);
-    assert(right < m_nodeCapacity);
+    if (node == m_root) {
+      assert(m_nodes[*node].parent == std::nullopt);
+    }
 
-    assert(m_nodes[left].parent == node);
-    assert(m_nodes[right].parent == node);
+    const auto left = m_nodes[*node].left;
+    const auto right = m_nodes[*node].right;
 
-    validateStructure(left);
-    validateStructure(right);
+    if (m_nodes[*node].is_leaf()) {
+      assert(left == std::nullopt);
+      assert(right == std::nullopt);
+      assert(m_nodes[*node].height == 0);
+    } else {
+      assert(left < m_nodeCapacity);
+      assert(right < m_nodeCapacity);
+      assert(left != std::nullopt);
+      assert(right != std::nullopt);
+
+      assert(m_nodes[*left].parent == node);
+      assert(m_nodes[*right].parent == node);
+
+      validateStructure(left);
+      validateStructure(right);
+    }
   }
 
   //! Assert that the sub-tree has valid metrics.
   /*! \param node
           The index of the root node.
    */
-  void validateMetrics(index_type node) const
+  void validateMetrics(maybe_index node) const
   {
-    if (node == NULL_NODE) return;
-
-    unsigned int left = m_nodes[node].left;
-    unsigned int right = m_nodes[node].right;
-
-    if (m_nodes[node].is_leaf()) {
-      assert(left == NULL_NODE);
-      assert(right == NULL_NODE);
-      assert(m_nodes[node].height == 0);
+    if (node == std::nullopt) {
       return;
     }
 
-    assert(left < m_nodeCapacity);
-    assert(right < m_nodeCapacity);
+    const auto left = m_nodes[*node].left;
+    const auto right = m_nodes[*node].right;
 
-    int height1 = m_nodes[left].height;
-    int height2 = m_nodes[right].height;
-    int height = 1 + std::max(height1, height2);
-    (void)height;  // Unused variable in Release build
-    assert(m_nodes[node].height == height);
+    if (m_nodes[*node].is_leaf()) {
+      assert(left == std::nullopt);
+      assert(right == std::nullopt);
+      assert(m_nodes[*node].height == 0);
+      return;
+    } else {
+      assert(left < m_nodeCapacity);
+      assert(right < m_nodeCapacity);
+      assert(left != std::nullopt);
+      assert(right != std::nullopt);
 
-    aabb_type aabb;
-    aabb.merge(m_nodes[left].aabb, m_nodes[right].aabb);
+      const auto height1 = m_nodes[*left].height;
+      const auto height2 = m_nodes[*right].height;
+      const auto height = 1 + std::max(height1, height2);
+      assert(m_nodes[*node].height == height);
 
-    for (unsigned int i = 0; i < 2; i++) {
-      assert(aabb.m_min[i] == m_nodes[node].aabb.m_min[i]);
-      assert(aabb.m_max[i] == m_nodes[node].aabb.m_max[i]);
+      aabb_type aabb;
+      aabb.merge(m_nodes[*left].aabb, m_nodes[*right].aabb);
+
+      for (auto i = 0; i < 2; i++) {
+        assert(aabb.m_min[i] == m_nodes[*node].aabb.m_min[i]);
+        assert(aabb.m_max[i] == m_nodes[*node].aabb.m_max[i]);
+      }
+
+      validateMetrics(left);
+      validateMetrics(right);
     }
-
-    validateMetrics(left);
-    validateMetrics(right);
   }
 };
 

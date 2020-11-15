@@ -423,72 +423,43 @@ class tree final
     print(stream, "", m_root, false);
   }
 
-  auto update(const key_type& id,
-              vector_type& lowerBound,
-              vector_type& upperBound,
-              bool alwaysReinsert = false) -> bool
+  auto update(const key_type& key,
+              const vector_type& lowerBound,
+              const vector_type& upperBound,
+              bool forceReinsert = false) -> bool
   {
-    // Map iterator.
-    std::unordered_map<unsigned int, unsigned int>::iterator it;
+    if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
+      const auto nodeIndex = it->second;  // Extract the node index.
 
-    // Find the particle.
-    it = m_indexMap.find(id);
+      assert(nodeIndex < m_nodeCapacity);
+      assert(m_nodes.at(nodeIndex).is_leaf());
 
-    // The particle doesn't exist.
-    if (it == m_indexMap.end()) {
-      throw std::invalid_argument("[ERROR]: Invalid particle index!");
-    }
+      // Create the new AABB.
+      aabb_type aabb{lowerBound, upperBound};
 
-    // Extract the node index.
-    unsigned int node = it->second;
-
-    assert(node < m_nodeCapacity);
-    assert(m_nodes[node].is_leaf());
-
-    // AABB size in each dimension.
-    std::vector<double> size(dimension);
-
-    // Compute the AABB limits.
-    for (unsigned int i = 0; i < dimension; i++) {
-      // Validate the bound.
-      if (lowerBound[i] > upperBound[i]) {
-        throw std::invalid_argument(
-            "[ERROR]: AABB lower bound is greater than the upper bound!");
+      // No need to update if the particle is still within its fattened AABB.
+      if (!forceReinsert && m_nodes.at(nodeIndex).aabb.contains(aabb)) {
+        return false;
       }
 
-      size[i] = upperBound[i] - lowerBound[i];
-    }
+      // Remove the current leaf.
+      remove_leaf(nodeIndex);
+      aabb.fatten(m_skinThickness);
 
-    // Create the new AABB.
-    aabb_type aabb(lowerBound, upperBound);
+      auto& node = m_nodes.at(nodeIndex);
+      node.aabb = aabb;
+      node.aabb.m_area = aabb.compute_area();
+      //    m_nodes[node].aabb.m_centre = m_nodes[node].aabb.computeCentre();
 
-    // No need to update if the particle is still within its fattened AABB.
-    if (!alwaysReinsert && m_nodes[node].aabb.contains(aabb)) return false;
-
-    // Remove the current leaf.
-    remove_leaf(node);
-
-    // Fatten the new AABB.
-    for (unsigned int i = 0; i < dimension; i++) {
-      aabb.m_min[i] -= m_skinThickness * size[i];
-      aabb.m_max[i] += m_skinThickness * size[i];
-    }
-
-    // Assign the new AABB.
-    m_nodes[node].aabb = aabb;
-
-    // Update the surface area and centroid.
-    m_nodes[node].aabb.m_area = m_nodes[node].aabb.compute_area();
-    //    m_nodes[node].aabb.m_centre = m_nodes[node].aabb.computeCentre();
-
-    // Insert a new leaf node.
-    insert_leaf(node);
+      insert_leaf(nodeIndex);
 
 #ifndef NDEBUG
-    validate();
+      validate();
 #endif
-
-    return true;
+      return true;
+    } else {
+      return false;
+    }
   }
 
   void set_thickness_factor(std::optional<double> thicknessFactor)

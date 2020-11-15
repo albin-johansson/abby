@@ -540,14 +540,14 @@ class tree final  // TODO revamp: relocate, query,
   void erase(const key_type& key)
   {
     if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
-      const auto index = it->second;
+      const auto nodeIndex = it->second;
       m_indexMap.erase(it);
 
-      assert(index < m_nodeCapacity);
-      assert(m_nodes.at(index).is_leaf());
+      assert(nodeIndex < m_nodeCapacity);
+      assert(m_nodes.at(nodeIndex).is_leaf());
 
-      remove_leaf(index);
-      free_node(index);
+      remove_leaf(nodeIndex);
+      free_node(nodeIndex);
     }
 
 #ifndef NDEBUG

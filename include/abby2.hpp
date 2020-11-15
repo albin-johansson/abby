@@ -419,7 +419,7 @@ class tree final
 
   void print(std::ostream& stream) const
   {
-    stream << "abby2:\n";
+    stream << "abby::tree\n";
     print(stream, "", m_root, false);
   }
 

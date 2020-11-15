@@ -2,6 +2,7 @@
 
 #include <algorithm>      // min, max
 #include <cassert>        // assert
+#include <cmath>          // abs
 #include <limits>         // numeric_limits
 #include <optional>       // optional
 #include <ostream>        // ostream
@@ -499,17 +500,23 @@ class tree final
     return query(std::numeric_limits<unsigned int>::max(), aabb);
   }
 
-  [[nodiscard]] auto computeMaximumBalance() const -> unsigned int
+  [[nodiscard]] auto compute_maximum_balance() const -> size_type
   {
-    unsigned int maxBalance = 0;
-    for (unsigned int i = 0; i < m_nodeCapacity; i++) {
-      if (m_nodes[i].height <= 1) continue;
+    size_type maxBalance{0};
+    for (auto i = 0; i < m_nodeCapacity; ++i) {
+      // if (node.height <= 1) {
+      //   continue;
+      // }
+      const auto& node = m_nodes.at(i);
+      if (node.height > 2) {
+        assert(!node.is_leaf());
+        assert(node.left != NULL_NODE);
+        assert(node.right != NULL_NODE);
 
-      assert(m_nodes[i].is_leaf() == false);
-
-      unsigned int balance = std::abs(m_nodes[m_nodes[i].left].height -
-                                      m_nodes[m_nodes[i].right].height);
-      maxBalance = std::max(maxBalance, balance);
+        const auto balance = std::abs(m_nodes.at(node.left).height -
+                                      m_nodes.at(node.right).height);
+        maxBalance = std::max(maxBalance, balance);
+      }
     }
 
     return maxBalance;

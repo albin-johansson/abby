@@ -573,6 +573,11 @@ class tree final
     }
   }
 
+  /**
+   * \brief Clears the tree of all entries.
+   *
+   * \since 0.2.0
+   */
   void clear()
   {
     // Iterator pointing to the start of the particle map.

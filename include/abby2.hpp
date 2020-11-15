@@ -774,6 +774,18 @@ class tree final
     return m_indexMap.size();
   }
 
+  /**
+   * \brief Indicates whether or not the tree is empty.
+   *
+   * \return `true` if there are no AABBs stored in the tree; `false` otherwise.
+   *
+   * \since 0.1.0
+   */
+  [[nodiscard]] auto is_empty() const noexcept -> bool
+  {
+    return m_indexMap.empty();
+  }
+
   [[nodiscard]] auto thickness_factor() const noexcept -> std::optional<double>
   {
     return m_skinThickness;

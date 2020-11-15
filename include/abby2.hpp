@@ -1042,6 +1042,11 @@ class tree final
     node.height = -1;
   }
 
+  /**
+   * \brief Doubles the size of the node pool.
+   *
+   * \since 0.1.0
+   */
   void grow_pool()
   {
     assert(m_nodeCount == m_nodeCapacity);
@@ -1054,6 +1059,17 @@ class tree final
     m_nextFreeIndex = static_cast<index_type>(m_nodeCount);
   }
 
+  /**
+   * \brief Returns the index to a new node.
+   *
+   * \details This function will grow the node pool if there are no available
+   * nodes. Otherwise, this function will just increment the next free node
+   * index and return the index of the previous next free node.
+   *
+   * \return the index of the allocated node.
+   *
+   * \since 0.1.0
+   */
   [[nodiscard]] auto allocate_node() -> index_type
   {
     if (m_nextFreeIndex == std::nullopt) {

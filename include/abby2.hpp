@@ -166,35 +166,25 @@ class aabb final
   double m_area{};
 };
 
-/*! \brief A node of the AABB tree.
-
-    Each node of the tree contains an AABB object which corresponds to a
-    particle, or a group of particles, in the simulation box. The AABB
-    objects of individual particles are "fattened" before they are stored
-    to avoid having to continually update and rebalance the tree when
-    displacements are small.
-
-    Nodes are aware of their position within in the tree. The isLeaf member
-    function allows the tree to query whether the node is a leaf, i.e. to
-    determine whether it holds a single particle.
- */
-template <typename T>
-struct Node
+template <typename Key, typename T>
+struct node final
 {
+  // TODO optional indices and ID
+
+  using key_type = Key;
   using aabb_type = aabb<T>;
+  using index_type = unsigned int;
 
+  key_type id;
   aabb_type aabb;
-  unsigned int parent;
-  unsigned int next;
-  unsigned int left;
-  unsigned int right;
-  int height;
-  unsigned int particle;
 
-  /*! \return
-          Whether the node is a leaf node.
-   */
-  bool isLeaf() const
+  index_type parent;
+  index_type next;
+  index_type left;
+  index_type right;
+  int height;
+
+  [[nodiscard]] auto is_leaf() const noexcept -> bool
   {
     return (left == NULL_NODE);
   }
@@ -212,10 +202,11 @@ template <typename Key, typename T = double>
 class Tree
 {
  public:
+  using value_type = T;
   using key_type = Key;
-  using vector_type = vector2<T>;
-  using aabb_type = aabb<T>;
-  using node_type = Node<T>;
+  using vector_type = vector2<value_type>;
+  using aabb_type = aabb<value_type>;
+  using node_type = node<key_type, value_type>;
   using size_type = std::size_t;
   using index_type = unsigned int;
 
@@ -298,7 +289,7 @@ class Tree
                                                                    node));
 
     // Store the particle index.
-    nodes[node].particle = particle;
+    nodes[node].id = particle;
 
 #ifndef NDEBUG
     validate();
@@ -330,7 +321,7 @@ class Tree
     particleMap.erase(it);
 
     assert(node < nodeCapacity);
-    assert(nodes[node].isLeaf());
+    assert(nodes[node].is_leaf());
 
     removeLeaf(node);
     freeNode(node);
@@ -352,7 +343,7 @@ class Tree
       unsigned int node = it->second;
 
       assert(node < nodeCapacity);
-      assert(nodes[node].isLeaf());
+      assert(nodes[node].is_leaf());
 
       removeLeaf(node);
       freeNode(node);
@@ -383,8 +374,8 @@ class Tree
       const auto& node = nodes.at(index);
 
       stream << prefix << (isLeft ? "├── " : "└── ");
-      if (node.isLeaf()) {
-        stream << node.particle << "\n";
+      if (node.is_leaf()) {
+        stream << node.id << "\n";
       } else {
         stream << "X\n";
       }
@@ -419,7 +410,7 @@ class Tree
     unsigned int node = it->second;
 
     assert(node < nodeCapacity);
-    assert(nodes[node].isLeaf());
+    assert(nodes[node].is_leaf());
 
     // AABB size in each dimension.
     std::vector<double> size(dimension);
@@ -505,10 +496,10 @@ class Tree
       // Test for overlap between the AABBs.
       if (aabb.overlaps(nodeAABB, touchIsOverlap)) {
         // Check that we're at a leaf node.
-        if (nodes[node].isLeaf()) {
+        if (nodes[node].is_leaf()) {
           // Can't interact with itself.
-          if (nodes[node].particle != particle) {
-            particles.push_back(nodes[node].particle);
+          if (nodes[node].id != particle) {
+            particles.push_back(nodes[node].id);
           }
         } else {
           stack.push_back(nodes[node].left);
@@ -577,7 +568,7 @@ class Tree
     for (unsigned int i = 0; i < nodeCapacity; i++) {
       if (nodes[i].height <= 1) continue;
 
-      assert(nodes[i].isLeaf() == false);
+      assert(nodes[i].is_leaf() == false);
 
       unsigned int balance =
           std::abs(nodes[nodes[i].left].height - nodes[nodes[i].right].height);
@@ -639,7 +630,7 @@ class Tree
       // Free node.
       if (nodes[i].height < 0) continue;
 
-      if (nodes[i].isLeaf()) {
+      if (nodes[i].is_leaf()) {
         nodes[i].parent = NULL_NODE;
         nodeIndices[count] = i;
         count++;
@@ -792,7 +783,7 @@ class Tree
     const aabb_type leafAABB = nodes[leaf].aabb;
     unsigned int index = root;
 
-    while (!nodes[index].isLeaf()) {
+    while (!nodes[index].is_leaf()) {
       // Extract the children of the node.
       unsigned int left = nodes[index].left;
       unsigned int right = nodes[index].right;
@@ -811,7 +802,7 @@ class Tree
 
       // Cost of descending to the left.
       double costLeft;
-      if (nodes[left].isLeaf()) {
+      if (nodes[left].is_leaf()) {
         aabb_type aabb;
         aabb.merge(leafAABB, nodes[left].aabb);
         costLeft = aabb.area() + inheritanceCost;
@@ -825,7 +816,7 @@ class Tree
 
       // Cost of descending to the right.
       double costRight;
-      if (nodes[right].isLeaf()) {
+      if (nodes[right].is_leaf()) {
         aabb_type aabb;
         aabb.merge(leafAABB, nodes[right].aabb);
         costRight = aabb.area() + inheritanceCost;
@@ -955,7 +946,7 @@ class Tree
   {
     assert(node != NULL_NODE);
 
-    if (nodes[node].isLeaf() || (nodes[node].height < 2)) return node;
+    if (nodes[node].is_leaf() || (nodes[node].height < 2)) return node;
 
     unsigned int left = nodes[node].left;
     unsigned int right = nodes[node].right;
@@ -1092,7 +1083,7 @@ class Tree
   {
     assert(node < nodeCapacity);
 
-    if (nodes[node].isLeaf()) return 0;
+    if (nodes[node].is_leaf()) return 0;
 
     unsigned int height1 = computeHeight(nodes[node].left);
     unsigned int height2 = computeHeight(nodes[node].right);
@@ -1113,7 +1104,7 @@ class Tree
     unsigned int left = nodes[node].left;
     unsigned int right = nodes[node].right;
 
-    if (nodes[node].isLeaf()) {
+    if (nodes[node].is_leaf()) {
       assert(left == NULL_NODE);
       assert(right == NULL_NODE);
       assert(nodes[node].height == 0);
@@ -1141,7 +1132,7 @@ class Tree
     unsigned int left = nodes[node].left;
     unsigned int right = nodes[node].right;
 
-    if (nodes[node].isLeaf()) {
+    if (nodes[node].is_leaf()) {
       assert(left == NULL_NODE);
       assert(right == NULL_NODE);
       assert(nodes[node].height == 0);

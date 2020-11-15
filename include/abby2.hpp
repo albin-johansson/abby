@@ -371,34 +371,23 @@ class tree final
 #endif
   }
 
-  void erase(const key_type& id)
+  void erase(const key_type& key)
   {
-    // Map iterator.
-    std::unordered_map<unsigned int, unsigned int>::iterator it;
+    if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
+      const auto node = it->second;  // Extract the node index.
 
-    // Find the particle.
-    it = m_indexMap.find(id);
+      m_indexMap.erase(it);
 
-    // The particle doesn't exist.
-    if (it == m_indexMap.end()) {
-      throw std::invalid_argument("[ERROR]: Invalid particle index!");
-    }
+      assert(node < m_nodeCapacity);
+      assert(m_nodes.at(node).is_leaf());
 
-    // Extract the node index.
-    unsigned int node = it->second;
-
-    // Erase the particle from the map.
-    m_indexMap.erase(it);
-
-    assert(node < m_nodeCapacity);
-    assert(m_nodes[node].is_leaf());
-
-    remove_leaf(node);
-    freeNode(node);
+      remove_leaf(node);
+      free_node(node);
 
 #ifndef NDEBUG
-    validate();
+      validate();
 #endif
+    }
   }
 
   void clear()
@@ -415,7 +404,7 @@ class tree final
       assert(m_nodes[node].is_leaf());
 
       remove_leaf(node);
-      freeNode(node);
+      free_node(node);
 
       it++;
     }
@@ -746,7 +735,7 @@ class tree final
 
   void print(std::ostream& stream,
              const std::string& prefix,
-             maybe_index index,
+             const maybe_index index,
              bool isLeft) const
   {
     if (index != std::nullopt) {
@@ -820,15 +809,16 @@ class tree final
     return nodeIndex;
   }
 
-  void freeNode(index_type node)
+  void free_node(const index_type node)
   {
     assert(node < m_nodeCapacity);
     assert(0 < m_nodeCount);
 
-    m_nodes[node].next = m_nextFreeIndex;
-    m_nodes[node].height = -1;
+    m_nodes.at(node).next = m_nextFreeIndex;
+    m_nodes.at(node).height = -1;
+
     m_nextFreeIndex = node;
-    m_nodeCount--;
+    --m_nodeCount;
   }
 
   [[nodiscard]] static auto left_cost(const aabb_type& leafAabb,
@@ -1004,7 +994,7 @@ class tree final
       const auto& leftNode = m_nodes.at(left.value());
       const auto& rightNode = m_nodes.at(right.value());
 
-      node.aabb.merge(leftNode.aabb, rightNode.aabb);
+      node.aabb = aabb_type::merge(leftNode.aabb, rightNode.aabb);
       node.height = 1 + std::max(leftNode.height, rightNode.height);
 
       index = node.parent;
@@ -1019,11 +1009,12 @@ class tree final
     }
 
     const auto parentIndex = m_nodes.at(leafIndex).parent;
-    const auto grandParentIndex = m_nodes.at(parentIndex).parent;
+    const auto grandParentIndex = m_nodes.at(parentIndex.value()).parent;
 
-    const auto siblingIndex = (m_nodes.at(parentIndex).left == leafIndex)
-                                  ? m_nodes.at(parentIndex).right
-                                  : m_nodes.at(parentIndex).left;
+    const auto siblingIndex =
+        (m_nodes.at(parentIndex.value()).left == leafIndex)
+            ? m_nodes.at(parentIndex.value()).right
+            : m_nodes.at(parentIndex.value()).left;
 
     // Destroy the parent and connect the sibling to the grandparent.
     if (grandParentIndex != std::nullopt) {
@@ -1033,15 +1024,15 @@ class tree final
         m_nodes.at(*grandParentIndex).right = siblingIndex;
       }
 
-      m_nodes.at(*siblingIndex).parent = grandParentIndex;
-      freeNode(parentIndex);
+      m_nodes.at(siblingIndex.value()).parent = grandParentIndex;
+      free_node(parentIndex.value());
 
       // Adjust ancestor bounds.
       adjust_ancestor_bounds(grandParentIndex);
     } else {
       m_root = siblingIndex;
       m_nodes.at(siblingIndex.value()).parent = std::nullopt;
-      freeNode(parentIndex);
+      free_node(parentIndex.value());
     }
   }
 

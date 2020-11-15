@@ -306,7 +306,22 @@ class aabb final
     return m_area;
   }
 
-  // private:
+  [[nodiscard]] constexpr auto width() const noexcept -> T
+  {
+    return m_max.x - m_min.x;
+  }
+
+  [[nodiscard]] constexpr auto height() const noexcept -> T
+  {
+    return m_max.y - m_min.y;
+  }
+
+  [[nodiscard]] constexpr auto size() const noexcept -> vector_type
+  {
+    return m_max - m_min;
+  }
+
+  // private: // TODO make private
   vector_type m_min;
   vector_type m_max;
   double m_area{};
@@ -520,6 +535,18 @@ class tree final
     return update(key, {lowerBound, upperBound}, forceReinsert);
   }
 
+  auto relocate(const key_type& key,
+                const vector_type& position,
+                bool forceReinsert = false) -> bool
+  {
+    if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
+      const auto& aabb = m_nodes.at(it->second).aabb;
+      return update(key, {position, position + aabb.size()}, forceReinsert);
+    } else {
+      return false;
+    }
+  }
+
   /// Rebuild an optimal tree.
   void rebuild()
   {
@@ -683,7 +710,7 @@ class tree final
     return maxBalance;
   }
 
-  [[nodiscard]] auto computeSurfaceAreaRatio() const -> double
+  [[nodiscard]] auto compute_surface_area_ratio() const -> double
   {
     if (m_root == std::nullopt) {
       return 0;

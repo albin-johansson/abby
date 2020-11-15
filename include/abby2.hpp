@@ -695,7 +695,7 @@ class tree final
       freeCount++;
     }
 
-    assert(height() == computeHeight());
+    assert(height() == compute_height());
     assert((m_nodeCount + freeCount) == m_nodeCapacity);
 #endif
   }
@@ -1167,24 +1167,25 @@ class tree final
     return nodeIndex;
   }
 
-  [[nodiscard]] auto computeHeight() const -> size_type
+  [[nodiscard]] auto compute_height() const -> size_type
   {
-    return computeHeight(m_root);
+    return compute_height(m_root);
   }
 
-  [[nodiscard]] auto computeHeight(maybe_index node) const -> size_type
+  [[nodiscard]] auto compute_height(const maybe_index nodeIndex) const
+      -> size_type
   {
-    assert(node < m_nodeCapacity);
-    assert(node != std::nullopt);
+    assert(nodeIndex < m_nodeCapacity);
+    assert(nodeIndex != std::nullopt);
 
-    if (m_nodes[*node].is_leaf()) {
+    const auto& node = m_nodes.at(*nodeIndex);
+    if (node.is_leaf()) {
       return 0;
+    } else {
+      const auto left = compute_height(node.left);
+      const auto right = compute_height(node.right);
+      return 1 + std::max(left, right);
     }
-
-    const auto height1 = computeHeight(m_nodes[*node].left);
-    const auto height2 = computeHeight(m_nodes[*node].right);
-
-    return 1 + std::max(height1, height2);
   }
 
   //! Assert that the sub-tree has a valid structure.

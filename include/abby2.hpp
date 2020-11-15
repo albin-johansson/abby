@@ -190,16 +190,8 @@ struct node final
   }
 };
 
-/*! \brief The dynamic AABB tree.
-
-    The dynamic AABB tree is a hierarchical data structure that can be used
-    to efficiently query overlaps between objects of arbitrary shape and
-    size that lie inside of a simulation box. Support is provided for
-    periodic and non-periodic boxes, as well as boxes with partial
-    periodicity, e.g. periodic along specific axes.
- */
 template <typename Key, typename T = double>
-class Tree
+class tree final
 {
  public:
   using value_type = T;
@@ -210,7 +202,7 @@ class Tree
   using size_type = std::size_t;
   using index_type = unsigned int;
 
-  explicit Tree(unsigned int dimension_ = 3,
+  explicit tree(unsigned int dimension_ = 3,
                 double skinThickness_ = 0.05,
                 unsigned int nParticles = 16,
                 bool touchIsOverlap = true)

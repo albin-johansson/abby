@@ -131,7 +131,7 @@ class aabb final
  public:
   using vector_type = vector2<T>;
 
-  constexpr aabb() noexcept = default;
+  [[deprecated]] constexpr aabb() noexcept = default;
 
   constexpr aabb(const vector_type& min, const vector_type& max)
       : m_min{min},

@@ -70,26 +70,6 @@ struct vec2 final
   T y{};  ///< The y-axis component.
 };
 
-/**
- * \typedef point
- *
- * \brief An alias for `vec2` that represents a point.
- *
- * \since 0.1.0
- */
-template <typename T>
-using point [[deprecated]] = vec2<T>;
-
-/**
- * \typedef size
- *
- * \brief An alias for `vec2` that represents a width and height.
- *
- * \since 0.1.0
- */
-template <typename T>
-using size [[deprecated]] = vec2<T>;
-
 // clang-format off
 template <typename T> vec2(T, T) -> vec2<T>;
 // clang-format on

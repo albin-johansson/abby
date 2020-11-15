@@ -903,6 +903,36 @@ class tree final
     return index;
   }
 
+  [[nodiscard]] auto balance(const index_type nodeIndex) -> index_type
+  {
+    if (m_nodes.at(nodeIndex).is_leaf() || (m_nodes.at(nodeIndex).height < 2)) {
+      return nodeIndex;
+    }
+
+    const auto leftIndex = m_nodes.at(nodeIndex).left.value();
+    const auto rightIndex = m_nodes.at(nodeIndex).right.value();
+
+    assert(leftIndex < m_nodeCapacity);
+    assert(rightIndex < m_nodeCapacity);
+
+    const auto currentBalance =
+        m_nodes.at(rightIndex).height - m_nodes.at(leftIndex).height;
+
+    // Rotate right branch up.
+    if (currentBalance > 1) {
+      rotate_right(nodeIndex, leftIndex, rightIndex);
+      return rightIndex;
+    }
+
+    // Rotate left branch up.
+    if (currentBalance < -1) {
+      rotate_left(nodeIndex, leftIndex, rightIndex);
+      return leftIndex;
+    }
+
+    return nodeIndex;
+  }
+
   void fix_tree_upwards(maybe_index index)
   {
     while (index != std::nullopt) {
@@ -1137,36 +1167,6 @@ class tree final
     }
   }
 
-  [[nodiscard]] auto balance(const index_type nodeIndex) -> index_type
-  {
-    if (m_nodes.at(nodeIndex).is_leaf() || (m_nodes.at(nodeIndex).height < 2)) {
-      return nodeIndex;
-    }
-
-    const auto leftIndex = m_nodes.at(nodeIndex).left.value();
-    const auto rightIndex = m_nodes.at(nodeIndex).right.value();
-
-    assert(leftIndex < m_nodeCapacity);
-    assert(rightIndex < m_nodeCapacity);
-
-    const auto currentBalance =
-        m_nodes.at(rightIndex).height - m_nodes.at(leftIndex).height;
-
-    // Rotate right branch up.
-    if (currentBalance > 1) {
-      rotate_right(nodeIndex, leftIndex, rightIndex);
-      return rightIndex;
-    }
-
-    // Rotate left branch up.
-    if (currentBalance < -1) {
-      rotate_left(nodeIndex, leftIndex, rightIndex);
-      return leftIndex;
-    }
-
-    return nodeIndex;
-  }
-
   [[nodiscard]] auto compute_height() const -> size_type
   {
     return compute_height(m_root);
@@ -1188,10 +1188,6 @@ class tree final
     }
   }
 
-  //! Assert that the sub-tree has a valid structure.
-  /*! \param node
-          The index of the root node.
-   */
   void validate_structure(const maybe_index nodeIndex) const
   {
     if (nodeIndex == std::nullopt) {
@@ -1225,10 +1221,6 @@ class tree final
     }
   }
 
-  //! Assert that the sub-tree has valid metrics.
-  /*! \param node
-          The index of the root node.
-   */
   void validate_metrics(const maybe_index nodeIndex) const
   {
     if (nodeIndex == std::nullopt) {

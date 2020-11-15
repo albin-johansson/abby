@@ -1110,18 +1110,17 @@ class tree final  // TODO revamp: relocate, query,
       return;
     }
 
-    auto& leafNode = m_nodes.at(leafIndex);
-    const auto leafAabb = leafNode.box;  // copy leaf nodes AABB
+    const auto leafAabb = m_nodes.at(leafIndex).box;  // copy leaf nodes AABB
     const auto siblingIndex = find_best_sibling(leafAabb);
-    auto& sibling = m_nodes.at(siblingIndex);
+    assert(leafIndex != siblingIndex);
 
     // Create a new parent
-    const auto oldParentIndex = sibling.parent;
+    const auto oldParentIndex = m_nodes.at(siblingIndex).parent;
     const auto newParentIndex = allocate_node();
     auto& newParent = m_nodes.at(newParentIndex);
     newParent.parent = oldParentIndex;
-    newParent.box = combine(leafAabb, sibling.box);
-    newParent.height = sibling.height + 1;
+    newParent.box = combine(leafAabb, m_nodes.at(siblingIndex).box);
+    newParent.height = m_nodes.at(siblingIndex).height + 1;
 
     if (oldParentIndex != std::nullopt) {
       // The sibling was not the root
@@ -1139,11 +1138,11 @@ class tree final  // TODO revamp: relocate, query,
     newParent.left = siblingIndex;
     newParent.right = leafIndex;
 
-    sibling.parent = newParentIndex;
-    leafNode.parent = newParentIndex;
+    m_nodes.at(siblingIndex).parent = newParentIndex;
+    m_nodes.at(leafIndex).parent = newParentIndex;
 
     // Walk up the tree and repair it
-    fix_tree_upwards(leafNode.parent);
+    fix_tree_upwards(m_nodes.at(leafIndex).parent);
   }
 
   void adjust_ancestor_bounds(opt_index index)

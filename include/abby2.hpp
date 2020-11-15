@@ -835,61 +835,57 @@ class tree final
     m_nodeCount--;
   }
 
-  void insert_leaf(index_type leaf)
+  [[nodiscard]] static auto left_cost(const aabb_type& leafAabb,
+                                      const node_type& leftNode,
+                                      const double minimumCost) -> double
   {
-    if (m_root == std::nullopt) {
-      m_root = leaf;
-      m_nodes[*m_root].parent = std::nullopt;
-      return;
+    if (leftNode.is_leaf()) {
+      return aabb_type::merge(leafAabb, leftNode.aabb).area() + minimumCost;
+    } else {
+      const auto oldArea = leftNode.aabb.area();
+      const auto newArea = aabb_type::merge(leafAabb, leftNode.aabb).area();
+      return (newArea - oldArea) + minimumCost;
     }
+  }
 
-    // Find the best sibling for the node.
+  [[nodiscard]] static auto right_cost(const aabb_type& leafAabb,
+                                       const node_type& rightNode,
+                                       const double minimumCost) -> double
+  {
+    if (rightNode.is_leaf()) {
+      const auto aabb = aabb_type::merge(leafAabb, rightNode.aabb);
+      return aabb.area() + minimumCost;
+    } else {
+      const auto aabb = aabb_type::merge(leafAabb, rightNode.aabb);
+      const auto oldArea = rightNode.aabb.area();
+      const auto newArea = aabb.area();
+      return (newArea - oldArea) + minimumCost;
+    }
+  }
 
-    const aabb_type leafAABB = m_nodes[leaf].aabb;
-    auto index = m_root;
+  [[nodiscard]] auto find_best_sibling(const aabb_type& leafAabb) const
+      -> index_type
+  {
+    auto index = m_root.value();
 
-    while (!m_nodes[*index].is_leaf()) {
-      // Extract the children of the node.
-      const auto left = m_nodes[*index].left.value();
-      const auto right = m_nodes[*index].right.value();
+    while (!m_nodes.at(index).is_leaf()) {
+      const auto& node = m_nodes.at(index);
+      const auto left = node.left.value();
+      const auto right = node.right.value();
 
-      const auto surfaceArea = m_nodes[*index].aabb.area();
-
-      const auto combinedAabb =
-          aabb_type::merge(m_nodes[*index].aabb, leafAABB);
-      //      aabb_type combinedAABB;
-      //      combinedAABB.merge(m_nodes[*index].aabb, leafAABB);
-      const auto combinedSurfaceArea = combinedAabb.area();
+      const auto surfaceArea = node.aabb.area();
+      const auto combinedSurfaceArea =
+          aabb_type::merge(node.aabb, leafAabb).area();
 
       // Cost of creating a new parent for this node and the new leaf.
       const auto cost = 2.0 * combinedSurfaceArea;
 
       // Minimum cost of pushing the leaf further down the tree.
-      const auto inheritanceCost = 2.0 * (combinedSurfaceArea - surfaceArea);
+      const auto minimumCost = 2.0 * (combinedSurfaceArea - surfaceArea);
 
-      // Cost of descending to the left.
-      double costLeft;
-      if (m_nodes[left].is_leaf()) {
-        const auto aabb = aabb_type::merge(leafAABB, m_nodes[left].aabb);
-        costLeft = aabb.area() + inheritanceCost;
-      } else {
-        const auto aabb = aabb_type::merge(leafAABB, m_nodes[left].aabb);
-        const auto oldArea = m_nodes[left].aabb.area();
-        const auto newArea = aabb.area();
-        costLeft = (newArea - oldArea) + inheritanceCost;
-      }
-
-      // Cost of descending to the right.
-      double costRight;
-      if (m_nodes[right].is_leaf()) {
-        const auto aabb = aabb_type::merge(leafAABB, m_nodes[right].aabb);
-        costRight = aabb.area() + inheritanceCost;
-      } else {
-        const auto aabb = aabb_type::merge(leafAABB, m_nodes[right].aabb);
-        const auto oldArea = m_nodes[right].aabb.area();
-        const auto newArea = aabb.area();
-        costRight = (newArea - oldArea) + inheritanceCost;
-      }
+      const auto costLeft = left_cost(leafAabb, m_nodes.at(left), minimumCost);
+      const auto costRight =
+          right_cost(leafAabb, m_nodes.at(right), minimumCost);
 
       // Descend according to the minimum cost.
       if ((cost < costLeft) && (cost < costRight)) {
@@ -904,50 +900,70 @@ class tree final
       }
     }
 
-    const auto sibling = index.value();
+    return index;
+  }
 
-    // Create a new parent.
-    const auto oldParent = m_nodes[sibling].parent;
-    const auto newParent = allocate_node();
-    m_nodes[newParent].parent = oldParent;
-    m_nodes[newParent].aabb = aabb_type::merge(leafAABB, m_nodes[sibling].aabb);
-    //    m_nodes[newParent].aabb.merge(leafAABB, m_nodes[sibling].aabb);
-    m_nodes[newParent].height = m_nodes[sibling].height + 1;
-
-    if (oldParent != std::nullopt) {  // The sibling was not the root.
-      if (m_nodes[*oldParent].left == sibling) {
-        m_nodes[*oldParent].left = newParent;
-      } else {
-        m_nodes[*oldParent].right = newParent;
-      }
-
-      m_nodes[newParent].left = sibling;
-      m_nodes[newParent].right = leaf;
-      m_nodes[sibling].parent = newParent;
-      m_nodes[leaf].parent = newParent;
-    } else {  // The sibling was the root.
-      m_nodes[newParent].left = sibling;
-      m_nodes[newParent].right = leaf;
-      m_nodes[sibling].parent = newParent;
-      m_nodes[leaf].parent = newParent;
-      m_root = newParent;
-    }
-
-    // Walk back up the tree fixing heights and AABBs.
-    index = m_nodes[leaf].parent;
+  void fix_tree_upwards(maybe_index index)
+  {
     while (index != std::nullopt) {
       index = balance(*index);
 
-      const auto left = m_nodes[*index].left.value();
-      const auto right = m_nodes[*index].right.value();
+      auto& node = m_nodes.at(*index);
 
-      m_nodes[*index].height =
-          1 + std::max(m_nodes[left].height, m_nodes[right].height);
-      m_nodes[*index].aabb =
-          aabb_type::merge(m_nodes[left].aabb, m_nodes[right].aabb);
+      const auto left = node.left.value();
+      const auto right = node.right.value();
 
-      index = m_nodes[*index].parent;
+      const auto& leftNode = m_nodes.at(left);
+      const auto& rightNode = m_nodes.at(right);
+
+      node.height = 1 + std::max(leftNode.height, rightNode.height);
+      node.aabb = aabb_type::merge(leftNode.aabb, rightNode.aabb);
+
+      index = node.parent;
     }
+  }
+
+  void insert_leaf(const index_type leafIndex)
+  {
+    if (m_root == std::nullopt) {
+      m_root = leafIndex;
+      m_nodes.at(*m_root).parent = std::nullopt;
+      return;
+    }
+
+    // Find the best sibling for the node.
+    const auto leafAabb = m_nodes.at(leafIndex).aabb;  // copy current AABB
+    const auto siblingIndex = find_best_sibling(leafAabb);
+
+    // Create a new parent.
+    const auto oldParentIndex = m_nodes.at(siblingIndex).parent;
+    const auto newParentIndex = allocate_node();
+
+    auto& newParent = m_nodes.at(newParentIndex);
+    newParent.parent = oldParentIndex;
+    newParent.aabb = aabb_type::merge(leafAabb, m_nodes.at(siblingIndex).aabb);
+    // m_nodes[newParent].aabb.merge(leafAABB, m_nodes[sibling].aabb);
+    newParent.height = m_nodes.at(siblingIndex).height + 1;
+
+    if (oldParentIndex != std::nullopt) {  // The sibling was not the root.
+      auto& oldParent = m_nodes.at(*oldParentIndex);
+      if (oldParent.left == siblingIndex) {
+        oldParent.left = newParentIndex;
+      } else {
+        oldParent.right = newParentIndex;
+      }
+    } else {  // The sibling was the root.
+      m_root = newParentIndex;
+    }
+
+    newParent.left = siblingIndex;
+    newParent.right = leafIndex;
+
+    m_nodes.at(siblingIndex).parent = newParentIndex;
+    m_nodes.at(leafIndex).parent = newParentIndex;
+
+    // Walk back up the tree fixing heights and AABBs.
+    fix_tree_upwards(m_nodes.at(leafIndex).parent);
   }
 
   void removeLeaf(index_type leaf)
@@ -999,137 +1015,156 @@ class tree final
     }
   }
 
-  auto balance(const index_type node) -> index_type
+  void rotate_right(const index_type nodeIndex,
+                    const index_type leftIndex,
+                    const index_type rightIndex)
   {
-    //    assert(node != std::nullopt);
+    auto& node = m_nodes.at(nodeIndex);
+    auto& rightNode = m_nodes.at(rightIndex);
 
-    if (m_nodes[node].is_leaf() || (m_nodes[node].height < 2)) {
-      return node;
+    const auto rightLeft = rightNode.left.value();
+    const auto rightRight = rightNode.right.value();
+
+    assert(rightLeft < m_nodeCapacity);
+    assert(rightRight < m_nodeCapacity);
+
+    // Swap node and its right-hand child.
+    rightNode.left = nodeIndex;
+    rightNode.parent = node.parent;
+    node.parent = rightIndex;
+
+    // The node's old parent should now point to its right-hand child.
+    if (rightNode.parent != std::nullopt) {
+      auto& rightParent = m_nodes.at(*rightNode.parent);
+      if (rightParent.left == nodeIndex) {
+        rightParent.left = rightIndex;
+      } else {
+        assert(rightParent.right == nodeIndex);
+        rightParent.right = rightIndex;
+      }
+    } else {
+      m_root = rightIndex;
     }
 
-    const auto left = m_nodes[node].left.value();
-    const auto right = m_nodes[node].right.value();
+    auto& leftNode = m_nodes.at(leftIndex);
+    auto& rightRightNode = m_nodes.at(rightRight);
+    auto& rightLeftNode = m_nodes.at(rightLeft);
 
-    assert(left < m_nodeCapacity);
-    assert(right < m_nodeCapacity);
+    // Rotate.
+    if (rightLeftNode.height > rightRightNode.height) {
+      rightNode.right = rightLeft;
+      node.right = rightRight;
 
-    const auto currentBalance = m_nodes[right].height - m_nodes[left].height;
+      rightRightNode.parent = nodeIndex;
+
+      node.aabb = aabb_type::merge(leftNode.aabb, rightRightNode.aabb);
+      rightNode.aabb = aabb_type::merge(node.aabb, rightLeftNode.aabb);
+
+      node.height = 1 + std::max(leftNode.height, rightRightNode.height);
+      rightNode.height = 1 + std::max(node.height, rightLeftNode.height);
+    } else {
+      rightNode.right = rightRight;
+      node.right = rightLeft;
+
+      rightLeftNode.parent = nodeIndex;
+
+      node.aabb = aabb_type::merge(leftNode.aabb, rightLeftNode.aabb);
+      rightNode.aabb = aabb_type::merge(node.aabb, rightRightNode.aabb);
+
+      node.height = 1 + std::max(leftNode.height, rightLeftNode.height);
+      rightNode.height = 1 + std::max(node.height, rightRightNode.height);
+    }
+  }
+
+  void rotate_left(const index_type nodeIndex,
+                   const index_type leftIndex,
+                   const index_type rightIndex)
+  {
+    auto& node = m_nodes.at(nodeIndex);
+    auto& leftNode = m_nodes.at(leftIndex);
+
+    const auto leftLeft = leftNode.left.value();
+    const auto leftRight = leftNode.right.value();
+
+    assert(leftLeft < m_nodeCapacity);
+    assert(leftRight < m_nodeCapacity);
+
+    // Swap node and its left-hand child.
+    leftNode.left = nodeIndex;
+    leftNode.parent = node.parent;
+    node.parent = leftIndex;
+
+    // The node's old parent should now point to its left-hand child.
+    if (leftNode.parent != std::nullopt) {
+      auto& leftParent = m_nodes.at(*leftNode.parent);
+      if (leftParent.left == nodeIndex) {
+        leftParent.left = leftIndex;
+      } else {
+        assert(leftParent.right == nodeIndex);
+        leftParent.right = leftIndex;
+      }
+    } else {
+      m_root = leftIndex;
+    }
+
+    auto& rightNode = m_nodes.at(rightIndex);
+    auto& leftLeftNode = m_nodes.at(leftLeft);
+    auto& leftRightNode = m_nodes.at(leftRight);
+
+    // Rotate.
+    if (leftLeftNode.height > leftRightNode.height) {
+      leftNode.right = leftLeft;
+      node.left = leftRight;
+
+      leftRightNode.parent = nodeIndex;
+
+      node.aabb = aabb_type::merge(rightNode.aabb, leftRightNode.aabb);
+      leftNode.aabb = aabb_type::merge(node.aabb, leftLeftNode.aabb);
+
+      node.height = 1 + std::max(rightNode.height, leftRightNode.height);
+      leftNode.height = 1 + std::max(node.height, leftLeftNode.height);
+    } else {
+      leftNode.right = leftRight;
+      node.left = leftLeft;
+
+      leftLeftNode.parent = nodeIndex;
+
+      node.aabb = aabb_type::merge(rightNode.aabb, leftLeftNode.aabb);
+      leftNode.aabb = aabb_type::merge(node.aabb, leftRightNode.aabb);
+
+      node.height = 1 + std::max(rightNode.height, leftLeftNode.height);
+      leftNode.height = 1 + std::max(node.height, leftRightNode.height);
+    }
+  }
+
+  [[nodiscard]] auto balance(const index_type nodeIndex) -> index_type
+  {
+    if (m_nodes.at(nodeIndex).is_leaf() || (m_nodes.at(nodeIndex).height < 2)) {
+      return nodeIndex;
+    }
+
+    const auto leftIndex = m_nodes.at(nodeIndex).left.value();
+    const auto rightIndex = m_nodes.at(nodeIndex).right.value();
+
+    assert(leftIndex < m_nodeCapacity);
+    assert(rightIndex < m_nodeCapacity);
+
+    const auto currentBalance =
+        m_nodes.at(rightIndex).height - m_nodes.at(leftIndex).height;
 
     // Rotate right branch up.
     if (currentBalance > 1) {
-      const auto rightLeft = m_nodes[right].left.value();
-      const auto rightRight = m_nodes[right].right.value();
-
-      assert(rightLeft < m_nodeCapacity);
-      assert(rightRight < m_nodeCapacity);
-
-      // Swap node and its right-hand child.
-      m_nodes[right].left = node;
-      m_nodes[right].parent = m_nodes[node].parent;
-      m_nodes[node].parent = right;
-
-      // The node's old parent should now point to its right-hand child.
-      if (m_nodes[right].parent != std::nullopt) {
-        if (m_nodes[*m_nodes[right].parent].left == node) {
-          m_nodes[*m_nodes[right].parent].left = right;
-        } else {
-          assert(m_nodes[*m_nodes[right].parent].right == node);
-          m_nodes[*m_nodes[right].parent].right = right;
-        }
-      } else {
-        m_root = right;
-      }
-
-      // Rotate.
-      if (m_nodes[rightLeft].height > m_nodes[rightRight].height) {
-        m_nodes[right].right = rightLeft;
-        m_nodes[node].right = rightRight;
-        m_nodes[rightRight].parent = node;
-        m_nodes[node].aabb =
-            aabb_type::merge(m_nodes[left].aabb, m_nodes[rightRight].aabb);
-        m_nodes[right].aabb =
-            aabb_type::merge(m_nodes[node].aabb, m_nodes[rightLeft].aabb);
-
-        m_nodes[node].height =
-            1 + std::max(m_nodes[left].height, m_nodes[rightRight].height);
-        m_nodes[right].height =
-            1 + std::max(m_nodes[node].height, m_nodes[rightLeft].height);
-      } else {
-        m_nodes[right].right = rightRight;
-        m_nodes[node].right = rightLeft;
-        m_nodes[rightLeft].parent = node;
-        m_nodes[node].aabb =
-            aabb_type::merge(m_nodes[left].aabb, m_nodes[rightLeft].aabb);
-        m_nodes[right].aabb =
-            aabb_type::merge(m_nodes[node].aabb, m_nodes[rightRight].aabb);
-
-        m_nodes[node].height =
-            1 + std::max(m_nodes[left].height, m_nodes[rightLeft].height);
-        m_nodes[right].height =
-            1 + std::max(m_nodes[node].height, m_nodes[rightRight].height);
-      }
-
-      return right;
+      rotate_right(nodeIndex, leftIndex, rightIndex);
+      return rightIndex;
     }
 
     // Rotate left branch up.
     if (currentBalance < -1) {
-      const auto leftLeft = m_nodes[left].left.value();
-      const auto leftRight = m_nodes[left].right.value();
-
-      assert(leftLeft < m_nodeCapacity);
-      assert(leftRight < m_nodeCapacity);
-
-      // Swap node and its left-hand child.
-      m_nodes[left].left = node;
-      m_nodes[left].parent = m_nodes[node].parent;
-      m_nodes[node].parent = left;
-
-      // The node's old parent should now point to its left-hand child.
-      if (m_nodes[left].parent != std::nullopt) {
-        if (m_nodes[*m_nodes[left].parent].left == node) {
-          m_nodes[*m_nodes[left].parent].left = left;
-        } else {
-          assert(m_nodes[*m_nodes[left].parent].right == node);
-          m_nodes[*m_nodes[left].parent].right = left;
-        }
-      } else {
-        m_root = left;
-      }
-
-      // Rotate.
-      if (m_nodes[leftLeft].height > m_nodes[leftRight].height) {
-        m_nodes[left].right = leftLeft;
-        m_nodes[node].left = leftRight;
-        m_nodes[leftRight].parent = node;
-        m_nodes[node].aabb =
-            aabb_type::merge(m_nodes[right].aabb, m_nodes[leftRight].aabb);
-        m_nodes[left].aabb =
-            aabb_type::merge(m_nodes[node].aabb, m_nodes[leftLeft].aabb);
-
-        m_nodes[node].height =
-            1 + std::max(m_nodes[right].height, m_nodes[leftRight].height);
-        m_nodes[left].height =
-            1 + std::max(m_nodes[node].height, m_nodes[leftLeft].height);
-      } else {
-        m_nodes[left].right = leftRight;
-        m_nodes[node].left = leftLeft;
-        m_nodes[leftLeft].parent = node;
-        m_nodes[node].aabb =
-            aabb_type::merge(m_nodes[right].aabb, m_nodes[leftLeft].aabb);
-        m_nodes[left].aabb =
-            aabb_type::merge(m_nodes[node].aabb, m_nodes[leftRight].aabb);
-
-        m_nodes[node].height =
-            1 + std::max(m_nodes[right].height, m_nodes[leftLeft].height);
-        m_nodes[left].height =
-            1 + std::max(m_nodes[node].height, m_nodes[leftRight].height);
-      }
-
-      return left;
+      rotate_left(nodeIndex, leftIndex, rightIndex);
+      return leftIndex;
     }
 
-    return node;
+    return nodeIndex;
   }
 
   [[nodiscard]] auto computeHeight() const -> size_type

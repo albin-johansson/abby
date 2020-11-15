@@ -478,19 +478,14 @@ class tree final
     print(stream, "", m_root, false);
   }
 
-  auto update(const key_type& key,
-              const vector_type& lowerBound,
-              const vector_type& upperBound,
-              bool forceReinsert = false) -> bool
+  auto update(const key_type& key, aabb_type aabb, bool forceReinsert = false)
+      -> bool
   {
     if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
       const auto nodeIndex = it->second;  // Extract the node index.
 
       assert(nodeIndex < m_nodeCapacity);
       assert(m_nodes.at(nodeIndex).is_leaf());
-
-      // Create the new AABB.
-      aabb_type aabb{lowerBound, upperBound};
 
       // No need to update if the particle is still within its fattened AABB.
       if (!forceReinsert && m_nodes.at(nodeIndex).aabb.contains(aabb)) {
@@ -515,6 +510,14 @@ class tree final
     } else {
       return false;
     }
+  }
+
+  auto update(const key_type& key,
+              const vector_type& lowerBound,
+              const vector_type& upperBound,
+              bool forceReinsert = false) -> bool
+  {
+    return update(key, {lowerBound, upperBound}, forceReinsert);
   }
 
   /// Rebuild an optimal tree.

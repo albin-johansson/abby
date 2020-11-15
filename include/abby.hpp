@@ -130,7 +130,7 @@ template <typename T>
 [[nodiscard]] constexpr auto operator==(const vec2<T>& lhs,
                                         const vec2<T>& rhs) noexcept -> bool
 {
-  return lhs.x == rhs.x && lhs.y == rhs.y;
+  return (lhs.x == rhs.x) && (lhs.y == rhs.y);
 }
 
 /**
@@ -282,7 +282,7 @@ template <typename T>
 [[nodiscard]] constexpr auto operator==(const aabb<T>& lhs,
                                         const aabb<T>& rhs) noexcept -> bool
 {
-  return lhs.min == rhs.min && lhs.max == rhs.max;
+  return (lhs.min == rhs.min) && (lhs.max == rhs.max);
 }
 
 /**

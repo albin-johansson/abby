@@ -803,7 +803,7 @@ class tree final  // TODO revamp: relocate, query,
     m_nodes.resize(m_nodeCapacity);
     for (auto i = beginInitIndex; i < (m_nodeCapacity - 1); ++i) {
       auto& node = m_nodes.at(i);
-      node.next = static_cast<index_type>(i + 1);
+      node.next = static_cast<index_type>(i) + 1;
       node.height = -1;
     }
 

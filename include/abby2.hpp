@@ -206,19 +206,12 @@ class tree final
   using index_type = unsigned int;
   using maybe_index = std::optional<index_type>;
 
-  explicit tree(size_type dimension_ = 3,
-                double skinThickness_ = 0.05,
-                size_type nParticles = 16,
-                bool touchIsOverlap = true)
-      : dimension{dimension_},
-        skinThickness{skinThickness_},
+  [[deprecated]] explicit tree(double skinThickness_ = 0.05,
+                               size_type nParticles = 16,
+                               bool touchIsOverlap = true)
+      : skinThickness{skinThickness_},
         touchIsOverlap{touchIsOverlap}
   {
-    // Validate the dimensionality.
-    if ((dimension < 2)) {
-      throw std::invalid_argument("[ERROR]: Invalid dimensionality!");
-    }
-
     // Initialise the tree.
     root = NULL_NODE;
     nodeCount = 0;
@@ -250,10 +243,10 @@ class tree final
     unsigned int node = allocateNode();
 
     // AABB size in each dimension.
-    std::vector<double> size(dimension);
+    vector_type size;
 
     // Compute the AABB limits.
-    for (unsigned int i = 0; i < dimension; i++) {
+    for (unsigned int i = 0; i < 2; i++) {
       // Validate the bound.
       if (lowerBound[i] > upperBound[i]) {
         throw std::invalid_argument(
@@ -266,7 +259,7 @@ class tree final
     }
 
     // Fatten the AABB.
-    for (unsigned int i = 0; i < dimension; i++) {
+    for (unsigned int i = 0; i < 2; i++) {
       nodes[node].aabb.m_min[i] -= skinThickness * size[i];
       nodes[node].aabb.m_max[i] += skinThickness * size[i];
     }
@@ -645,30 +638,16 @@ class tree final
   }
 
  private:
-  /// The index of the root node.
-  unsigned int root;
-
-  /// The dynamic tree.
   std::vector<node_type> nodes;
-
-  /// The current number of nodes in the tree.
-  unsigned int nodeCount;
-
-  /// The current node capacity.
-  unsigned int nodeCapacity;
-
-  /// The position of node at the top of the free list.
-  unsigned int freeList;
-
-  /// The dimensionality of the system.
-  size_type dimension;
-
-  /// The skin thickness of the fattened AABBs, as a fraction of the AABB base
-  /// length.
-  double skinThickness;
-
-  /// A map between particle and node indices.
   std::unordered_map<key_type, index_type> particleMap;
+
+  index_type root{NULL_NODE};  ///< Root node index
+  index_type freeList{0};      ///< Index of next free node
+
+  size_type nodeCount{0};  ///< Number of nodes in the tree.
+  size_type nodeCapacity;  ///< Current node capacity.
+
+  double skinThickness{0.05};
 
   /// Does touching count as overlapping in tree queries?
   bool touchIsOverlap;
@@ -1085,7 +1064,7 @@ class tree final
     aabb_type aabb;
     aabb.merge(nodes[left].aabb, nodes[right].aabb);
 
-    for (unsigned int i = 0; i < dimension; i++) {
+    for (unsigned int i = 0; i < 2; i++) {
       assert(aabb.m_min[i] == nodes[node].aabb.m_min[i]);
       assert(aabb.m_max[i] == nodes[node].aabb.m_max[i]);
     }

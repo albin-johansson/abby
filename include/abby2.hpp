@@ -204,6 +204,7 @@ class tree final
   using node_type = node<key_type, value_type>;
   using size_type = std::size_t;
   using index_type = unsigned int;
+  using maybe_index = std::optional<index_type>;
 
   explicit tree(size_type dimension_ = 3,
                 double skinThickness_ = 0.05,

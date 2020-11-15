@@ -393,7 +393,7 @@ class tree final
     assert(node < m_nodeCapacity);
     assert(m_nodes[node].is_leaf());
 
-    removeLeaf(node);
+    remove_leaf(node);
     freeNode(node);
 
 #ifndef NDEBUG
@@ -414,7 +414,7 @@ class tree final
       assert(node < m_nodeCapacity);
       assert(m_nodes[node].is_leaf());
 
-      removeLeaf(node);
+      remove_leaf(node);
       freeNode(node);
 
       it++;
@@ -477,7 +477,7 @@ class tree final
     if (!alwaysReinsert && m_nodes[node].aabb.contains(aabb)) return false;
 
     // Remove the current leaf.
-    removeLeaf(node);
+    remove_leaf(node);
 
     // Fatten the new AABB.
     for (unsigned int i = 0; i < dimension; i++) {
@@ -820,10 +820,6 @@ class tree final
     return nodeIndex;
   }
 
-  //! Free an existing node.
-  /*! \param node
-          The index of the node to be freed.
-   */
   void freeNode(index_type node)
   {
     assert(node < m_nodeCapacity);
@@ -996,52 +992,56 @@ class tree final
     fix_tree_upwards(m_nodes.at(leafIndex).parent);
   }
 
-  void removeLeaf(index_type leaf)
+  void adjust_ancestor_bounds(maybe_index index)
   {
-    if (leaf == m_root) {
+    while (index != std::nullopt) {
+      index = balance(*index);
+
+      auto& node = m_nodes.at(*index);
+
+      const auto left = node.left;
+      const auto right = node.right;
+      const auto& leftNode = m_nodes.at(left.value());
+      const auto& rightNode = m_nodes.at(right.value());
+
+      node.aabb.merge(leftNode.aabb, rightNode.aabb);
+      node.height = 1 + std::max(leftNode.height, rightNode.height);
+
+      index = node.parent;
+    }
+  }
+
+  void remove_leaf(const index_type leafIndex)
+  {
+    if (leafIndex == m_root) {
       m_root = std::nullopt;
       return;
     }
 
-    const auto parent = m_nodes[leaf].parent;
-    const auto grandParent = m_nodes[parent].parent;
-    maybe_index sibling;
+    const auto parentIndex = m_nodes.at(leafIndex).parent;
+    const auto grandParentIndex = m_nodes.at(parentIndex).parent;
 
-    if (m_nodes[parent].left == leaf) {
-      sibling = m_nodes[parent].right;
-    } else {
-      sibling = m_nodes[parent].left;
-    }
+    const auto siblingIndex = (m_nodes.at(parentIndex).left == leafIndex)
+                                  ? m_nodes.at(parentIndex).right
+                                  : m_nodes.at(parentIndex).left;
 
     // Destroy the parent and connect the sibling to the grandparent.
-    if (grandParent != std::nullopt) {
-      if (m_nodes[*grandParent].left == parent) {
-        m_nodes[*grandParent].left = sibling;
+    if (grandParentIndex != std::nullopt) {
+      if (m_nodes.at(*grandParentIndex).left == parentIndex) {
+        m_nodes.at(*grandParentIndex).left = siblingIndex;
       } else {
-        m_nodes[*grandParent].right = sibling;
+        m_nodes.at(*grandParentIndex).right = siblingIndex;
       }
 
-      m_nodes[*sibling].parent = grandParent;
-      freeNode(parent);
+      m_nodes.at(*siblingIndex).parent = grandParentIndex;
+      freeNode(parentIndex);
 
       // Adjust ancestor bounds.
-      auto index = grandParent;
-      while (index != std::nullopt) {
-        index = balance(*index);
-
-        const auto left = m_nodes[*index].left;
-        const auto right = m_nodes[*index].right;
-
-        m_nodes[*index].aabb.merge(m_nodes[*left].aabb, m_nodes[*right].aabb);
-        m_nodes[*index].height =
-            1 + std::max(m_nodes[*left].height, m_nodes[*right].height);
-
-        index = m_nodes[*index].parent;
-      }
+      adjust_ancestor_bounds(grandParentIndex);
     } else {
-      m_root = sibling;
-      m_nodes[*sibling].parent = std::nullopt;
-      freeNode(parent);
+      m_root = siblingIndex;
+      m_nodes.at(siblingIndex.value()).parent = std::nullopt;
+      freeNode(parentIndex);
     }
   }
 

@@ -251,25 +251,6 @@ class aabb final
     m_max.y += dy;
 
     m_area = compute_area();
-    //    vector_type size;  // AABB size in each dimension.
-    //
-    //    // Compute the AABB limits.
-    //    for (auto i = 0; i < 2; ++i) {
-    //      // Validate the bound.
-    //      if (m_min[i] > m_max[i]) {
-    //        throw std::invalid_argument("aabb: lower bound > upper bound!");
-    //      }
-    //
-    //      node.aabb.m_min[i] = lowerBound[i];
-    //      node.aabb.m_max[i] = upperBound[i];
-    //      size[i] = upperBound[i] - lowerBound[i];
-    //    }
-    //
-    //    // Fatten the AABB.
-    //    for (auto i = 0; i < 2; ++i) {
-    //      node.aabb.m_min[i] -= (m_skinThickness * size[i]);
-    //      node.aabb.m_max[i] += (m_skinThickness * size[i]);
-    //    }
   }
 
   /**

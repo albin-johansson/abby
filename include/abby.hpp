@@ -780,7 +780,7 @@ class tree final
     }
   }
 
-  /// Rebuild an optimal tree.
+  /// Rebuild an optimal tree. since 0.2.0
   void rebuild()
   {
     std::vector<index_type> nodeIndices(m_nodeCount);

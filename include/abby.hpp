@@ -708,8 +708,9 @@ class tree final
    *
    * \since 0.1.0
    */
-  auto update(const key_type& key, aabb_type aabb, bool forceReinsert = false)
-      -> bool
+  auto update(const key_type& key,
+              aabb_type aabb,
+              const bool forceReinsert = false) -> bool
   {
     if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
       const auto nodeIndex = it->second;  // Extract the node index.
@@ -746,7 +747,7 @@ class tree final
   auto update(const key_type& key,
               const vector_type& lowerBound,
               const vector_type& upperBound,
-              bool forceReinsert = false) -> bool
+              const bool forceReinsert = false) -> bool
   {
     return update(key, {lowerBound, upperBound}, forceReinsert);
   }
@@ -769,7 +770,7 @@ class tree final
    */
   auto relocate(const key_type& key,
                 const vector_type& position,
-                bool forceReinsert = false) -> bool
+                const bool forceReinsert = false) -> bool
   {
     if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
       const auto& aabb = m_nodes.at(it->second).aabb;
@@ -849,7 +850,8 @@ class tree final
 #endif
   }
 
-  void set_thickness_factor(std::optional<double> thicknessFactor)
+  // since 0.2.0
+  void set_thickness_factor(const std::optional<double> thicknessFactor)
   {
     if (thicknessFactor) {
       m_skinThickness = std::clamp(*thicknessFactor, 0.0, *thicknessFactor);
@@ -1056,7 +1058,7 @@ class tree final
   void print(std::ostream& stream,
              const std::string& prefix,
              const maybe_index index,
-             bool isLeft) const
+             const bool isLeft) const
   {
     if (index != std::nullopt) {
       const auto& node = m_nodes.at(*index);

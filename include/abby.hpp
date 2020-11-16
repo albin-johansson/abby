@@ -493,9 +493,9 @@ struct node final
   aabb_type aabb;
 
   maybe_index parent;
-  maybe_index next;
   maybe_index left;
   maybe_index right;
+  maybe_index next;
   int height{-1};
 
   [[nodiscard]] auto is_leaf() const noexcept -> bool

@@ -5,7 +5,8 @@ set(TEST_SOURCES
         unittest/test_main.cpp
         unittest/tree_test.cpp
         unittest/vec2_test.cpp
-        unittest/aabb_test.cpp)
+        unittest/aabb_test.cpp
+        unittest/node_test.cpp)
 
 add_executable(${ABBY_TEST_TARGET} ${TEST_SOURCES})
 

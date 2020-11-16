@@ -516,7 +516,8 @@ template <typename Key, typename T>
 struct node final
 {
   using key_type = Key;
-  using aabb_type = aabb<T>;
+  using value_type = T;
+  using aabb_type = aabb<value_type>;
 
   std::optional<key_type> id;
   aabb_type aabb;

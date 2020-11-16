@@ -776,8 +776,7 @@ class tree final
    * specified ID.
    *
    * \param key the ID associated with the AABB that will be moved.
-   * \param position the new position of the AABB associated with the specified
-   * ID.
+   * \param position the new position of the AABB.
    * \param forceReinsert `true` if the associated AABB is forced to be
    * reinserted into the tree.
    *

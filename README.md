@@ -4,7 +4,12 @@ A header-only implementation of an AABB tree.
 
 ## Purpose
 
-Collision detection is common in many applications, especially games. Subsequently, collision detection often require checking for potential collision between many different game objects, and as such it is important that the collision detection is efficient. A naive implementation will end up with quadratic complexity, which isn't very scalable. By using an AABB tree, bounding hitboxes are stored in a tree according to their position and size, which in turn enables logarithmic complexity for collision detection.
+Collision detection is common in many applications, especially games. Subsequently, collision
+detection often require checking for potential collision between many different game objects, and
+as such it is important that the collision detection is efficient. A naive implementation will end
+up with quadratic complexity, which isn't very scalable. By using an AABB tree, bounding hitboxes
+are stored in a tree according to their position and size, which in turn enables logarithmic
+complexity for collision detection.
 
 ## Example
 
@@ -57,4 +62,6 @@ Collision detection is common in many applications, especially games. Subsequent
 
 ## Acknowledgements
 
-The implementation of an AABB tree was based on two other AABB tree implementations: the [AABBCC](https://github.com/lohedges/aabbcc) library and the AABB tree in the [Simple Voxel Engine](https://github.com/JamesRandall/SimpleVoxelEngine) project. This library is an adaptation of those implementations. The AABBCC library uses the Zlib license and the Simple Voxel Engine project uses the MIT license.
+This library is an adapted and improved version of the [AABBCC](https://github.com/lohedges/aabbcc)
+library. Furthermore, the AABB tree in the [Simple Voxel Engine](https://github.com/JamesRandall/SimpleVoxelEngine)
+project also influenced the design of this library.

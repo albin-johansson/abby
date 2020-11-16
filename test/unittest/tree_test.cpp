@@ -5,11 +5,59 @@
 
 #include "abby.hpp"
 
+namespace {
+
+struct dummy_vector final
+{
+  double x{};
+  double y{};
+
+  [[nodiscard]] auto operator+(const dummy_vector& other) const noexcept
+      -> dummy_vector
+  {
+    return {x + other.x, y + other.y};
+  }
+
+  [[nodiscard]] auto operator-(const dummy_vector& other) const noexcept
+      -> dummy_vector
+  {
+    return {x - other.x, y - other.y};
+  }
+
+  // FIXME remove this requirement for custom vector types
+  [[nodiscard]] auto operator[](const std::size_t index) -> double&
+  {
+    if (index == 0) {
+      return x;
+    } else if (index == 1) {
+      return y;
+    } else {
+      throw std::invalid_argument{"dummy_vector: bad subscript index!"};
+    }
+  }
+
+  [[nodiscard]] auto operator[](const std::size_t index) const -> double
+  {
+    if (index == 0) {
+      return x;
+    } else if (index == 1) {
+      return y;
+    } else {
+      throw std::invalid_argument{"dummy_vector: bad subscript index!"};
+    }
+  }
+};
+
+using tree_t = abby::tree<int>;
+using aabb_t = tree_t::aabb_type;
+
+}  // namespace
+
 TEST_SUITE("tree")
 {
   TEST_CASE("tree::insert")
   {
-    abby::tree<int> tree;
+    tree_t tree;
     REQUIRE(tree.is_empty());
 
     tree.insert(1, {0, 0}, {100, 100});
@@ -23,9 +71,26 @@ TEST_SUITE("tree")
     CHECK(tree.size() == 3);
   }
 
+  TEST_CASE("tree with custom vector")
+  {
+    abby::tree<int, double, dummy_vector> tree;
+    tree.set_thickness_factor(std::nullopt);
+
+    const dummy_vector min{345, 122};
+    const dummy_vector max{564, 931};
+
+    tree.insert(7, min, max);
+
+    const auto& aabb = tree.get_aabb(7);
+    CHECK(aabb.min().x == min.x);
+    CHECK(aabb.min().y == min.y);
+    CHECK(aabb.max().x == max.x);
+    CHECK(aabb.max().y == max.y);
+  }
+
   TEST_CASE("tree::erase")
   {
-    abby::tree<int> tree;
+    tree_t tree;
 
     CHECK_NOTHROW(tree.erase(-1));
     CHECK_NOTHROW(tree.erase(0));
@@ -48,7 +113,7 @@ TEST_SUITE("tree")
 
   TEST_CASE("tree::update")
   {
-    abby::tree<int> tree;
+    tree_t tree;
     tree.set_thickness_factor(std::nullopt);
 
     CHECK_NOTHROW(tree.update(0, {{0, 0}, {10, 10}}));
@@ -57,7 +122,7 @@ TEST_SUITE("tree")
     tree.insert(99, {2, 34}, {78, 412});
 
     const auto id = 27;
-    const abby::aabb<double> original{{0, 0}, {100, 100}};
+    const tree_t::aabb_type original{{0, 0}, {100, 100}};
     tree.insert(id, original.min(), original.max());
 
     SUBCASE("Update to smaller AABB")
@@ -81,7 +146,7 @@ TEST_SUITE("tree")
 
     SUBCASE("Update to larger AABB")
     {
-      const abby::aabb<double> large{{20, 20}, {170, 170}};
+      const aabb_t large{{20, 20}, {170, 170}};
       tree.update(id, large);
 
       const auto& actual = tree.get_aabb(id);
@@ -93,7 +158,7 @@ TEST_SUITE("tree")
 
   TEST_CASE("tree::relocate")
   {
-    abby::tree<int> tree;
+    tree_t tree;
     tree.set_thickness_factor(std::nullopt);
 
     CHECK_NOTHROW(tree.relocate(0, {}));
@@ -109,11 +174,25 @@ TEST_SUITE("tree")
     CHECK(tree.get_aabb(7).min() == pos);
   }
 
+  TEST_CASE("tree::rebuild")
+  {
+    tree_t tree;
+    CHECK_NOTHROW(tree.rebuild());
+
+    tree.insert(1, {10, 10}, {20, 20});
+    tree.insert(2, {54, 76}, {243, 123});
+    tree.insert(3, {88, 43}, {674, 786});
+    tree.insert(4, {342, 124}, {7753, 2412});
+    tree.insert(5, {56, 352}, {1245, 3576});
+
+    CHECK_NOTHROW(tree.rebuild());
+  }
+
   TEST_CASE("tree::query")
   {
     SUBCASE("Empty tree")
     {
-      abby::tree<int> tree;
+      tree_t tree;
       std::vector<int> candidates;
 
       CHECK_NOTHROW(tree.query(0, std::back_inserter(candidates)));
@@ -122,7 +201,7 @@ TEST_SUITE("tree")
 
     SUBCASE("Populated tree")
     {
-      abby::tree<int> tree;
+      tree_t tree;
       std::vector<int> candidates;
 
       tree.insert(1, {10, 10}, {110, 110});
@@ -146,19 +225,34 @@ TEST_SUITE("tree")
 
   TEST_CASE("tree::get_aabb")
   {
-    abby::tree<int> tree;
+    tree_t tree;
     tree.set_thickness_factor(std::nullopt);
 
     CHECK_THROWS(tree.get_aabb(0));
 
-    const abby::aabb<double> aabb{{12, 34}, {56, 78}};
+    const aabb_t aabb{{12, 34}, {56, 78}};
     tree.insert(12, aabb.min(), aabb.max());
     CHECK(tree.get_aabb(12) == aabb);
   }
 
+  TEST_CASE("tree::height")
+  {
+    tree_t tree;
+    CHECK(tree.height() == 0);
+
+    tree.insert(1, {45, 23}, {66, 236});
+    CHECK(tree.height() == 0);
+
+    tree.insert(2, {22, 12}, {73, 91});
+    CHECK(tree.height() == 1);
+
+    tree.insert(3, {123, 321}, {456, 654});
+    CHECK(tree.height() == 2);
+  }
+
   TEST_CASE("tree::size")
   {
-    abby::tree<int> tree;
+    tree_t tree;
     CHECK(tree.size() == 0);
 
     tree.insert(0, {}, {1, 1});
@@ -174,9 +268,30 @@ TEST_SUITE("tree")
     CHECK(tree.size() == 0);
   }
 
+  TEST_CASE("tree::node_count")
+  {
+    tree_t tree;
+    CHECK(tree.node_count() == 0);
+
+    tree.insert(1, {10, 10}, {20, 20});
+    CHECK(tree.node_count() == 1);
+
+    tree.insert(2, {40, 40}, {60, 55});
+    CHECK(tree.node_count() == 3);
+
+    tree.insert(3, {121, 145}, {432, 234});
+    CHECK(tree.node_count() == 5);
+
+    tree.erase(2);
+    CHECK(tree.node_count() == 3);
+
+    tree.erase(3);
+    CHECK(tree.node_count() == 1);
+  }
+
   TEST_CASE("tree::is_empty")
   {
-    abby::tree<int> tree;
+    tree_t tree;
     CHECK(tree.is_empty());
 
     tree.insert(123, {}, {1, 1});
@@ -186,9 +301,21 @@ TEST_SUITE("tree")
     CHECK(tree.is_empty());
   }
 
+  TEST_CASE("tree::thickness_factor")
+  {
+    tree_t tree;
+    CHECK(tree.thickness_factor() == 0.05);
+
+    tree.set_thickness_factor(0.5);
+    CHECK(tree.thickness_factor() == 0.5);
+
+    tree.set_thickness_factor(std::nullopt);
+    CHECK(!tree.thickness_factor());
+  }
+
   TEST_CASE("tree with many AABBs")
   {
-    abby::tree<int> tree{24};
+    tree_t tree{24};
     tree.set_thickness_factor(std::nullopt);
 
     tree.insert(1, {182, 831}, {416, 1770});

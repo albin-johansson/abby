@@ -4,17 +4,7 @@
 #include "abby.hpp"
 
 using vec2 = abby::vector2<double>;
-using aabb_t = abby::aabb<double>;
-
-namespace {
-
-struct dummy_vector final
-{
-  double x{};
-  double y{};
-};
-
-}  // namespace
+using aabb_t = abby::aabb<vec2>;
 
 TEST_SUITE("aabb")
 {
@@ -29,19 +19,6 @@ TEST_SUITE("aabb")
   {
     const vec2 min{12, 34};
     const vec2 max{56, 78};
-
-    const aabb_t aabb{min, max};
-
-    CHECK(aabb.min().x == min.x);
-    CHECK(aabb.min().y == min.y);
-    CHECK(aabb.max().x == max.x);
-    CHECK(aabb.max().y == max.y);
-  }
-
-  TEST_CASE("aabb::templated ctor")
-  {
-    const dummy_vector min{12, 34};
-    const dummy_vector max{56, 78};
 
     const aabb_t aabb{min, max};
 

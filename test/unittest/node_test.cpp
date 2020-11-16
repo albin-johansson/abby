@@ -2,11 +2,10 @@
 
 #include "abby.hpp"
 
-using node_t = abby::node<int, double>;
+using node_t = abby::node<int, abby::vector2<double>>;
 
 static_assert(std::is_same_v<node_t::key_type, int>);
-static_assert(std::is_same_v<node_t::value_type, double>);
-static_assert(std::is_same_v<node_t::aabb_type , abby::aabb<double>>);
+static_assert(std::is_same_v<node_t::aabb_type , abby::aabb<abby::vector2<double>>>);
 
 TEST_SUITE("node")
 {

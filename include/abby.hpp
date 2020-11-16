@@ -182,16 +182,16 @@ template <typename T>
  *
  * \note This is really just a glorified rectangle.
  *
- * \tparam T the representation type used by the aabb, e.g. `float` or `double`.
+ * \tparam Vector the vector type that will be used. Must provide overloads for
+ * `operator+` and `operator-`.
  *
  * \since 0.1.0
  */
-template <typename T>
+template <typename Vector>
 class aabb final
 {
  public:
-  using value_type = T;
-  using vector_type = vector2<value_type>;
+  using vector_type = Vector;
 
   [[deprecated]] constexpr aabb() noexcept = default;
 
@@ -214,21 +214,6 @@ class aabb final
       throw std::invalid_argument("AABB: min > max");
     }
   }
-
-  /**
-   * \brief Creates an AABB.
-   *
-   * \tparam Vector the vector type.
-   *
-   * \param min the lower bounds of the AABB.
-   * \param max the upper bounds of the AABB.
-   *
-   * \since 0.3.0
-   */
-  template <typename Vector>
-  constexpr aabb(const Vector& min, const Vector& max)
-      : aabb{{min.x, min.y}, {max.x, max.y}}
-  {}
 
   /**
    * \brief Updates the stored area.
@@ -455,10 +440,6 @@ class aabb final
   double m_area{};
 };
 
-// clang-format off
-template <typename T> aabb(vector2<T>, vector2<T>) -> aabb<T>;
-// clang-format on
-
 /**
  * \brief Indicates whether or not two AABBs are equal.
  *
@@ -506,18 +487,17 @@ template <typename T>
  * with tree information.
  *
  * \tparam Key the type of the keys associated with each node.
- * \tparam T the representation type used by the AABBs.
+ * \tparam Vector the vector type used by the AABBs.
  *
  * \since 0.1.0
  *
  * \headerfile abby.hpp
  */
-template <typename Key, typename T>
+template <typename Key, typename Vector>
 struct node final
 {
   using key_type = Key;
-  using value_type = T;
-  using aabb_type = aabb<value_type>;
+  using aabb_type = aabb<Vector>;
 
   std::optional<key_type> id;
   aabb_type aabb;
@@ -543,23 +523,24 @@ struct node final
  * comparable and preferably small and cheap to copy type, e.g. `int`.
  * \tparam T the representation type used by the AABBs, should be a
  * floating-point type for best precision.
+ * \tparam Vector the vector type used by the AABBs.
  *
  * \since 0.1.0
  *
  * \headerfile abby.hpp
  */
-template <typename Key, typename T = double>
+template <typename Key, typename T = double, typename Vector = vector2<T>>
 class tree final
 {
   template <typename U>
   using pmr_stack = std::stack<U, std::pmr::deque<U>>;
 
  public:
-  using value_type = T;
   using key_type = Key;
-  using vector_type = vector2<value_type>;
-  using aabb_type = aabb<value_type>;
-  using node_type = node<key_type, value_type>;
+  using value_type = T;
+  using vector_type = Vector;
+  using node_type = node<key_type, vector_type>;
+  using aabb_type = typename node_type::aabb_type;
   using size_type = std::size_t;
   using index_type = size_type;
 
@@ -616,32 +597,6 @@ class tree final
     validate();
 #endif
   }
-
-  /**
-   * \brief Inserts an AABB in the tree.
-   *
-   * \details This function is useful if you're using your own vector type and
-   * you want to insert an AABB. The only requirements are that the vector type
-   * features public members `x` and `y`.
-   *
-   * \pre `key` cannot be in use at the time of invoking this function.
-   *
-   * \tparam Vector the type of the two-dimensional vector type.
-   *
-   * \param key the ID that will be associated with the AABB.
-   * \param lowerBound the lower-bound position of the AABB (i.e. the position).
-   * \param upperBound the upper-bound position of the AABB.
-   *
-   * \since 0.3.0
-   */
-  template <typename Vector>
-  void insert(const key_type& key,
-              const Vector& lowerBound,
-              const Vector& upperBound)
-  {
-    insert(key, {lowerBound.x, lowerBound.y}, {upperBound.x, upperBound.y});
-  }
-
   /**
    * \brief Removes the AABB associated with the specified ID.
    *
@@ -795,36 +750,6 @@ class tree final
   }
 
   /**
-   * \brief Updates the AABB associated with the specified ID.
-   *
-   * \note This function has no effect if there is no AABB associated with the
-   * specified ID.
-   *
-   * \tparam Vector the custom vector type.
-   *
-   * \param key the ID associated with the AABB that will be replaced.
-   * \param lowerBound the lower-bound position of the AABB (i.e. the position).
-   * \param upperBound the upper-bound position of the AABB.
-   * \param forceReinsert indicates whether or not the AABB is always
-   * reinserted, which wont happen if this is set to `true` and the new AABB is
-   * within the old AABB.
-   *
-   * \return `true` if an AABB was updated; `false` otherwise.
-   *
-   * \since 0.1.0
-   */
-  template <typename Vector>
-  auto update(const key_type& key,
-              const Vector& lowerBound,
-              const Vector& upperBound,
-              const bool forceReinsert = false) -> bool
-  {
-    return update(key,
-                  {{lowerBound.x, lowerBound.y}, {upperBound.x, upperBound.y}},
-                  forceReinsert);
-  }
-
-  /**
    * \brief Updates the position of the AABB associated with the specified ID.
    *
    * \note This function has no effect if there is no AABB associated with the
@@ -849,31 +774,6 @@ class tree final
     } else {
       return false;
     }
-  }
-
-  /**
-   * \brief Updates the position of the AABB associated with the specified ID.
-   *
-   * \note This function has no effect if there is no AABB associated with the
-   * specified ID.
-   *
-   * \tparam Vector the custom vector type.
-   *
-   * \param key the ID associated with the AABB that will be moved.
-   * \param position the new position of the AABB.
-   * \param forceReinsert `true` if the associated AABB is forced to be
-   * reinserted into the tree.
-   *
-   * \return `true` if an AABB was updated; `false` otherwise.
-   *
-   * \since 0.3.0
-   */
-  template <typename Vector>
-  auto relocate(const key_type& key,
-                const Vector& position,
-                const bool forceReinsert = false) -> bool
-  {
-    return relocate(key, {position.x, position.y}, forceReinsert);
   }
 
   /**

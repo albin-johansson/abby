@@ -19,7 +19,13 @@ include(doctest)
 
 target_include_directories(${ABBY_TEST_TARGET}
         PUBLIC unittest
+        PUBLIC lib
         PUBLIC ${INCLUDE_DIR})
 
+add_library(libAABBCC
+        lib/AABB.h
+        lib/AABB.cc)
+
 target_link_libraries(${ABBY_TEST_TARGET}
-        PUBLIC libDoctest)
+        PUBLIC libDoctest
+        PUBLIC libAABBCC)

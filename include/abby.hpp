@@ -799,16 +799,21 @@ class tree final
   /// Rebuild an optimal tree. since 0.2.0
   void rebuild()
   {
+    if (is_empty()) {
+      return;
+    }
+
     std::vector<index_type> nodeIndices(m_nodeCount);
-    int count{0};
+    size_type count{0};
 
     for (auto index = 0; index < m_nodeCapacity; ++index) {
-      if (m_nodes.at(index).height < 0) {  // Free node.
+      auto& node = m_nodes.at(index);
+      if (node.height < 0) {  // Free node.
         continue;
       }
 
-      if (m_nodes.at(index).is_leaf()) {
-        m_nodes.at(index).parent = std::nullopt;
+      if (node.is_leaf()) {
+        node.parent = std::nullopt;
         nodeIndices.at(count) = index;
         ++count;
       } else {

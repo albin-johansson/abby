@@ -49,7 +49,7 @@
 
 namespace abby {
 
-using maybe_index = std::optional<int>;
+using maybe_index = std::optional<std::size_t>;
 
 /**
  * \struct vector2
@@ -531,7 +531,7 @@ class tree final
   using aabb_type = aabb<value_type>;
   using node_type = node<key_type, value_type>;
   using size_type = std::size_t;
-  using index_type = int;
+  using index_type = size_type;
 
   /**
    * \brief Creates an AABB tree.

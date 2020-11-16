@@ -1539,7 +1539,7 @@ class tree final
 
     while (freeIndex != std::nullopt) {
       assert(freeIndex < m_nodeCapacity);
-      freeIndex = m_nodes[*freeIndex].next;
+      freeIndex = m_nodes.at(*freeIndex).next;
       freeCount++;
     }
 

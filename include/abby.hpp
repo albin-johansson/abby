@@ -586,7 +586,7 @@ class tree final
    *
    * \pre `key` cannot be in use at the time of invoking this function.
    *
-   * \param key the ID that will be associated with the box.
+   * \param key the ID that will be associated with the AABB.
    * \param lowerBound the lower-bound position of the AABB (i.e. the position).
    * \param upperBound the upper-bound position of the AABB.
    *
@@ -615,6 +615,31 @@ class tree final
 #ifndef NDEBUG
     validate();
 #endif
+  }
+
+  /**
+   * \brief Inserts an AABB in the tree.
+   *
+   * \details This function is useful if you're using your own vector type and
+   * you want to insert an AABB. The only requirements are that the vector type
+   * features public members `x` and `y`.
+   *
+   * \pre `key` cannot be in use at the time of invoking this function.
+   *
+   * \tparam Vector the type of the two-dimensional vector type.
+   *
+   * \param key the ID that will be associated with the AABB.
+   * \param lowerBound the lower-bound position of the AABB (i.e. the position).
+   * \param upperBound the upper-bound position of the AABB.
+   *
+   * \since 0.3.0
+   */
+  template <typename Vector>
+  void insert(const key_type& key,
+              const Vector& lowerBound,
+              const Vector& upperBound)
+  {
+    insert(key, {lowerBound.x, lowerBound.y}, {upperBound.x, upperBound.y});
   }
 
   /**
@@ -770,6 +795,36 @@ class tree final
   }
 
   /**
+   * \brief Updates the AABB associated with the specified ID.
+   *
+   * \note This function has no effect if there is no AABB associated with the
+   * specified ID.
+   *
+   * \tparam Vector the custom vector type.
+   *
+   * \param key the ID associated with the AABB that will be replaced.
+   * \param lowerBound the lower-bound position of the AABB (i.e. the position).
+   * \param upperBound the upper-bound position of the AABB.
+   * \param forceReinsert indicates whether or not the AABB is always
+   * reinserted, which wont happen if this is set to `true` and the new AABB is
+   * within the old AABB.
+   *
+   * \return `true` if an AABB was updated; `false` otherwise.
+   *
+   * \since 0.1.0
+   */
+  template <typename Vector>
+  auto update(const key_type& key,
+              const Vector& lowerBound,
+              const Vector& upperBound,
+              const bool forceReinsert = false) -> bool
+  {
+    return update(key,
+                  {{lowerBound.x, lowerBound.y}, {upperBound.x, upperBound.y}},
+                  forceReinsert);
+  }
+
+  /**
    * \brief Updates the position of the AABB associated with the specified ID.
    *
    * \note This function has no effect if there is no AABB associated with the
@@ -796,7 +851,36 @@ class tree final
     }
   }
 
-  /// Rebuild an optimal tree. since 0.2.0
+  /**
+   * \brief Updates the position of the AABB associated with the specified ID.
+   *
+   * \note This function has no effect if there is no AABB associated with the
+   * specified ID.
+   *
+   * \tparam Vector the custom vector type.
+   *
+   * \param key the ID associated with the AABB that will be moved.
+   * \param position the new position of the AABB.
+   * \param forceReinsert `true` if the associated AABB is forced to be
+   * reinserted into the tree.
+   *
+   * \return `true` if an AABB was updated; `false` otherwise.
+   *
+   * \since 0.3.0
+   */
+  template <typename Vector>
+  auto relocate(const key_type& key,
+                const Vector& position,
+                const bool forceReinsert = false) -> bool
+  {
+    return relocate(key, {position.x, position.y}, forceReinsert);
+  }
+
+  /**
+   * \brief Rebuilds the tree as an optimal tree.
+   *
+   * \since 0.2.0
+   */
   void rebuild()
   {
     if (is_empty()) {

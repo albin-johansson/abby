@@ -43,8 +43,8 @@ complexity for collision detection.
     // Prints the tree using a stream
     tree.print(std::clog);
 
-    // Replaces an AABB
-    tree.replace(2, {33.0, 76.0}, {123.0, 155.0});
+    // Updates an existing AABB
+    tree.update(2, {33.0, 76.0}, {123.0, 155.0});
 
     // Sets the position of an AABB
     tree.relocate(2, {12.0, 34.0});

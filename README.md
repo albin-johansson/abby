@@ -1,4 +1,4 @@
-# abby [![Build status](https://ci.appveyor.com/api/projects/status/p0ej0hg4cmemaeau?svg=true)](https://ci.appveyor.com/project/AlbinJohansson/abby) [![Build Status](https://travis-ci.org/albin-johansson/abby.svg?branch=dev)](https://travis-ci.org/albin-johansson/abby) ![version](https://img.shields.io/badge/version-0.2.0-blue.svg) [![Language](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+# abby [![Build status](https://ci.appveyor.com/api/projects/status/p0ej0hg4cmemaeau?svg=true)](https://ci.appveyor.com/project/AlbinJohansson/abby) [![Build Status](https://travis-ci.org/albin-johansson/abby.svg?branch=dev)](https://travis-ci.org/albin-johansson/abby) ![version](https://img.shields.io/badge/version-0.3.0-blue.svg) [![Language](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 A header-only implementation of an AABB tree.
 

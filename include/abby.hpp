@@ -287,9 +287,20 @@ class aabb final
     vector_type lower;
     vector_type upper;
 
-    for (auto i = 0; i < 2; ++i) {
-      lower[i] = std::min(fst.m_min[i], snd.m_min[i]);
-      upper[i] = std::max(fst.m_max[i], snd.m_max[i]);
+    {
+      const auto& fstMin = fst.min();
+      const auto& sndMin = snd.min();
+
+      lower.x = std::min(fstMin.x, sndMin.x);
+      lower.y = std::min(fstMin.y, sndMin.y);
+    }
+
+    {
+      const auto& fstMax = fst.max();
+      const auto& sndMax = snd.max();
+
+      upper.x = std::max(fstMax.x, sndMax.x);
+      upper.y = std::max(fstMax.y, sndMax.y);
     }
 
     return aabb{lower, upper};
@@ -313,15 +324,8 @@ class aabb final
   [[nodiscard]] constexpr auto contains(const aabb& other) const noexcept
       -> bool
   {
-    for (auto i = 0; i < 2; ++i) {
-      if (other.m_min[i] < m_min[i]) {
-        return false;
-      }
-      if (other.m_max[i] > m_max[i]) {
-        return false;
-      }
-    }
-    return true;
+    return (other.m_min.x >= m_min.x) && (other.m_min.y >= m_min.y) &&
+           (other.m_max.x <= m_max.x) && (other.m_max.y <= m_max.y);
   }
 
   /**
@@ -336,25 +340,17 @@ class aabb final
    *
    * \since 0.1.0
    */
-  [[nodiscard]] constexpr auto overlaps(const aabb& other,
-                                        bool touchIsOverlap) const noexcept
-      -> bool
+  [[nodiscard]] constexpr auto overlaps(
+      const aabb& other,
+      const bool touchIsOverlap) const noexcept -> bool
   {
     if (touchIsOverlap) {
-      for (auto i = 0; i < 2; ++i) {
-        if (other.m_max[i] < m_min[i] || other.m_min[i] > m_max[i]) {
-          return false;
-        }
-      }
+      return !(other.m_max.x < m_min.x || other.m_min.x > m_max.x ||
+               other.m_max.y < m_min.y || other.m_min.y > m_max.y);
     } else {
-      for (auto i = 0; i < 2; ++i) {
-        if (other.m_max[i] <= m_min[i] || other.m_min[i] >= m_max[i]) {
-          return false;
-        }
-      }
+      return !(other.m_max.x <= m_min.x || other.m_min.x >= m_max.x ||
+               other.m_max.y <= m_min.y || other.m_min.y >= m_max.y);
     }
-
-    return true;
   }
 
   /**
@@ -1614,10 +1610,10 @@ class tree final
       const auto aabb =
           aabb_type::merge(m_nodes.at(*left).aabb, m_nodes.at(*right).aabb);
 
-      for (auto i = 0; i < 2; ++i) {
-        assert(aabb.min()[i] == node.aabb.min()[i]);
-        assert(aabb.max()[i] == node.aabb.max()[i]);
-      }
+      assert(aabb.min().x == node.aabb.min().x);
+      assert(aabb.min().y == node.aabb.min().y);
+      assert(aabb.max().x == node.aabb.max().x);
+      assert(aabb.max().y == node.aabb.max().y);
 
       validate_metrics(left);
       validate_metrics(right);

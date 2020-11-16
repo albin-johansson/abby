@@ -51,11 +51,22 @@ namespace abby {
 
 using maybe_index = std::optional<int>;
 
+/**
+ * \struct vector2
+ *
+ * \brief A simple two-dimensional vector.
+ *
+ * \tparam T the representation type.
+ *
+ * \since 0.1.0
+ *
+ * \headerfile abby.hpp
+ */
 template <typename T>
 struct vector2 final
 {
-  T x{};
-  T y{};
+  T x{};  ///< The x-coordinate.
+  T y{};  ///< The y-coordinate.
 
   [[deprecated]] auto operator[](std::size_t index) -> T&
   {

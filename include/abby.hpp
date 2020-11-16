@@ -216,6 +216,21 @@ class aabb final
   }
 
   /**
+   * \brief Creates an AABB.
+   *
+   * \tparam Vector the vector type.
+   *
+   * \param min the lower bounds of the AABB.
+   * \param max the upper bounds of the AABB.
+   *
+   * \since 0.3.0
+   */
+  template <typename Vector>
+  constexpr aabb(const Vector& min, const Vector& max)
+      : aabb{{min.x, min.y}, {max.x, max.y}}
+  {}
+
+  /**
    * \brief Updates the stored area.
    *
    * \since 0.2.0
@@ -410,11 +425,25 @@ class aabb final
     return m_max - m_min;
   }
 
+  /**
+   * \brief Returns the lower bounds associated with the AABB.
+   *
+   * \return the lower bounds of the AABB.
+   *
+   * \since 0.2.0
+   */
   [[nodiscard]] constexpr auto min() const noexcept -> const vector_type&
   {
     return m_min;
   }
 
+  /**
+   * \brief Returns the upper bounds associated with the AABB.
+   *
+   * \return the upper bounds of the AABB.
+   *
+   * \since 0.2.0
+   */
   [[nodiscard]] constexpr auto max() const noexcept -> const vector_type&
   {
     return m_max;

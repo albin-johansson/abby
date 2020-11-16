@@ -6,6 +6,16 @@
 using vec2 = abby::vector2<double>;
 using aabb_t = abby::aabb<double>;
 
+namespace {
+
+struct dummy_vector final
+{
+  double x{};
+  double y{};
+};
+
+}  // namespace
+
 TEST_SUITE("aabb")
 {
   TEST_CASE("Default values")
@@ -15,53 +25,54 @@ TEST_SUITE("aabb")
     CHECK(aabb.max() == vec2{0, 0});
   }
 
-  TEST_CASE("aabb::operator==")
+  TEST_CASE("aabb::vector2 ctor")
   {
-    SUBCASE("Self")
-    {
-      const aabb_t aabb;
-      CHECK(aabb == aabb);
-    }
+    const vec2 min{12, 34};
+    const vec2 max{56, 78};
 
-    SUBCASE("Two equal AABBs")
-    {
-      const aabb_t fst{{10, 20}, {65, 82}};
-      const aabb_t snd{fst};
-      CHECK(fst == snd);
-      CHECK(snd == fst);
-    }
+    const aabb_t aabb{min, max};
 
-    SUBCASE("Two different AABBs")
-    {
-      const aabb_t fst{{73, 12}, {341, 275}};
-      const aabb_t snd{{27, 63}, {299, 512}};
-      CHECK_FALSE(fst == snd);
-      CHECK_FALSE(snd == fst);
-    }
+    CHECK(aabb.min().x == min.x);
+    CHECK(aabb.min().y == min.y);
+    CHECK(aabb.max().x == max.x);
+    CHECK(aabb.max().y == max.y);
   }
 
-  TEST_CASE("aabb::operator!=")
+  TEST_CASE("aabb::templated ctor")
   {
-    SUBCASE("Self")
+    const dummy_vector min{12, 34};
+    const dummy_vector max{56, 78};
+
+    const aabb_t aabb{min, max};
+
+    CHECK(aabb.min().x == min.x);
+    CHECK(aabb.min().y == min.y);
+    CHECK(aabb.max().x == max.x);
+    CHECK(aabb.max().y == max.y);
+  }
+
+  TEST_CASE("aabb::fatten")
+  {
+    SUBCASE("Fatten AABB")
     {
-      const aabb_t aabb;
-      CHECK_FALSE(aabb != aabb);
+      aabb_t aabb{{12, 24}, {47, 54}};
+
+      const auto areaBefore = aabb.area();
+      aabb.fatten(0.05);
+
+      const auto areaAfter = aabb.area();
+      CHECK(areaAfter > areaBefore);
     }
 
-    SUBCASE("Two equal AABBs")
+    SUBCASE("No-op")
     {
-      const aabb_t fst{{45, 66}, {346, 992}};
-      const aabb_t snd{fst};
-      CHECK_FALSE(fst != snd);
-      CHECK_FALSE(snd != fst);
-    }
+      aabb_t aabb{{12, 24}, {47, 54}};
 
-    SUBCASE("Two different AABBs")
-    {
-      const aabb_t fst{{55, 76}, {476, 775}};
-      const aabb_t snd{{29, 44}, {345, 173}};
-      CHECK(fst != snd);
-      CHECK(snd != fst);
+      const auto areaBefore = aabb.area();
+      aabb.fatten(std::nullopt);
+
+      const auto areaAfter = aabb.area();
+      CHECK(areaBefore == areaAfter);
     }
   }
 
@@ -83,7 +94,33 @@ TEST_SUITE("aabb")
     }
   }
 
-  TEST_CASE("merge")
+  TEST_CASE("aabb::size")
+  {
+    const auto width = 123;
+    const auto height = 345;
+
+    const vec2 pos{45, 32};
+    const aabb_t aabb{pos, pos + vec2{width, height}};
+
+    CHECK(aabb.size().x == width);
+    CHECK(aabb.size().y == height);
+  }
+
+  TEST_CASE("aabb::min")
+  {
+    const vec2 min{231, 453};
+    const aabb_t aabb{min, {999, 999}};
+    CHECK(aabb.min() == min);
+  }
+
+  TEST_CASE("aabb::max")
+  {
+    const vec2 max{786, 448};
+    const aabb_t aabb{{111, 111}, max};
+    CHECK(aabb.max() == max);
+  }
+
+  TEST_CASE("aabb::merge")
   {
     const aabb_t fst{{10, 15}, {200, 250}};
     const aabb_t snd{{83, 64}, {155, 126}};
@@ -152,6 +189,56 @@ TEST_SUITE("aabb")
       const aabb_t fst{{0, 0}, {10, 10}};
       const aabb_t snd{{4, 4}, {9, 9}};
       CHECK(fst.overlaps(snd, true));
+    }
+  }
+
+  TEST_CASE("aabb::operator==")
+  {
+    SUBCASE("Self")
+    {
+      const aabb_t aabb;
+      CHECK(aabb == aabb);
+    }
+
+    SUBCASE("Two equal AABBs")
+    {
+      const aabb_t fst{{10, 20}, {65, 82}};
+      const aabb_t snd{fst};
+      CHECK(fst == snd);
+      CHECK(snd == fst);
+    }
+
+    SUBCASE("Two different AABBs")
+    {
+      const aabb_t fst{{73, 12}, {341, 275}};
+      const aabb_t snd{{27, 63}, {299, 512}};
+      CHECK_FALSE(fst == snd);
+      CHECK_FALSE(snd == fst);
+    }
+  }
+
+  TEST_CASE("aabb::operator!=")
+  {
+    SUBCASE("Self")
+    {
+      const aabb_t aabb;
+      CHECK_FALSE(aabb != aabb);
+    }
+
+    SUBCASE("Two equal AABBs")
+    {
+      const aabb_t fst{{45, 66}, {346, 992}};
+      const aabb_t snd{fst};
+      CHECK_FALSE(fst != snd);
+      CHECK_FALSE(snd != fst);
+    }
+
+    SUBCASE("Two different AABBs")
+    {
+      const aabb_t fst{{55, 76}, {476, 775}};
+      const aabb_t snd{{29, 44}, {345, 173}};
+      CHECK(fst != snd);
+      CHECK(snd != fst);
     }
   }
 }

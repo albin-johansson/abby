@@ -20,13 +20,10 @@ Collision detection is common in many applications, especially games. Subsequent
     // Constructs an AABB tree that uses integers as identifiers and AABBs with double precision
     abby::tree<int, double> tree;
 
-    // Inserts a few AABBs (make_aabb takes a position and a size)
-    tree.insert(1, abby::make_aabb(abby::vec2{10.0, 10.0}, abby::vec2{120.0, 80.0}));
-    tree.insert(2, abby::make_aabb(abby::vec2{88.0, 63.0}, abby::vec2{50.0, 43.0}));
-    tree.insert(3, abby::make_aabb(abby::vec2{412.0, 132.0}, abby::vec2{66.0, 91.0}));
-
-    // Emplaces an AABB, this effectively calls make_aabb behind-the-scenes
-    tree.emplace(4, {150.0, 165.0}, {50.0, 50.0});
+    // Inserts a few AABBs, takes a lower and upper bound
+    tree.insert(1, {150.0, 165.0}, {50.0, 50.0});
+    tree.insert(2, {88.0, 63.0}, {150.0, 343.0});
+    tree.insert(3, {412.0, 132.0}, {566.0, 291.0});
 
     // Could also use a stack buffer
     std::vector<int> candidates;  
@@ -42,13 +39,19 @@ Collision detection is common in many applications, especially games. Subsequent
     tree.print(std::clog);
 
     // Replaces an AABB
-    tree.replace(2, abby::make_aabb(abby::vec2{33.0, 76.0}, abby::vec2{123.0, 155.0}));
+    tree.replace(2, {33.0, 76.0}, {123.0, 155.0});
 
     // Sets the position of an AABB
     tree.relocate(2, {12.0, 34.0});
 
     // Removes an AABB from the tree
     tree.erase(2);
+
+    // Rebuild as optimal tree
+    tree.rebuild();
+
+    // Clear the tree of all entries
+    tree.clear();
   }
 ```
 

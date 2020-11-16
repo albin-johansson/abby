@@ -58,7 +58,7 @@ TEST_SUITE("tree")
 
     const auto id = 27;
     const abby::aabb<double> original{{0, 0}, {100, 100}};
-    tree.insert(id, original.m_min, original.m_max);
+    tree.insert(id, original.min(), original.max());
 
     SUBCASE("Update to smaller AABB")
     {
@@ -66,17 +66,17 @@ TEST_SUITE("tree")
 
       {
         const auto& aabb = tree.get_aabb(id);
-        CHECK(original.m_min == aabb.m_min);
-        CHECK(original.m_max == aabb.m_max);
+        CHECK(original.min() == aabb.min());
+        CHECK(original.max() == aabb.max());
         CHECK(original.area() == aabb.area());
       }
 
       tree.update(id, {12, 13}, {65, 74}, true);
       const auto& aabb = tree.get_aabb(id);
-      CHECK(aabb.m_min.x == 12);
-      CHECK(aabb.m_min.y == 13);
-      CHECK(aabb.m_max.x == 65);
-      CHECK(aabb.m_max.y == 74);
+      CHECK(aabb.min().x == 12);
+      CHECK(aabb.min().y == 13);
+      CHECK(aabb.max().x == 65);
+      CHECK(aabb.max().y == 74);
     }
 
     SUBCASE("Update to larger AABB")
@@ -85,8 +85,8 @@ TEST_SUITE("tree")
       tree.update(id, large);
 
       const auto& actual = tree.get_aabb(id);
-      CHECK(large.m_min == actual.m_min);
-      CHECK(large.m_max == actual.m_max);
+      CHECK(large.min() == actual.min());
+      CHECK(large.max() == actual.max());
       CHECK(large.area() == actual.area());
     }
   }
@@ -106,7 +106,7 @@ TEST_SUITE("tree")
     tree.relocate(7, pos);
 
     CHECK(tree.size() == 3);
-    CHECK(tree.get_aabb(7).m_min == pos);
+    CHECK(tree.get_aabb(7).min() == pos);
   }
 
   TEST_CASE("tree::query")
@@ -152,7 +152,7 @@ TEST_SUITE("tree")
     CHECK_THROWS(tree.get_aabb(0));
 
     const abby::aabb<double> aabb{{12, 34}, {56, 78}};
-    tree.insert(12, aabb.m_min, aabb.m_max);
+    tree.insert(12, aabb.min(), aabb.max());
     CHECK(tree.get_aabb(12) == aabb);
   }
 

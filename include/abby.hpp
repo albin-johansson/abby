@@ -175,14 +175,36 @@ template <typename T>
   return !(lhs == rhs);
 }
 
+/**
+ * \class aabb
+ *
+ * \brief Represents an AABB (Axis-Aligned Bounding Box).
+ *
+ * \note This is really just a glorified rectangle.
+ *
+ * \tparam T the representation type used by the aabb, e.g. `float` or `double`.
+ *
+ * \since 0.1.0
+ */
 template <typename T>
 class aabb final
 {
  public:
-  using vector_type = vector2<T>;
+  using value_type = T;
+  using vector_type = vector2<value_type>;
 
   [[deprecated]] constexpr aabb() noexcept = default;
 
+  /**
+   * \brief Creates an AABB.
+   *
+   * \param min the lower bounds of the AABB.
+   * \param max the upper bounds of the AABB.
+   *
+   * \throws invalid_argument if `min` is greater than `max`.
+   *
+   * \since 0.1.0
+   */
   constexpr aabb(const vector_type& min, const vector_type& max)
       : m_min{min},
         m_max{max},
@@ -193,6 +215,25 @@ class aabb final
     }
   }
 
+  /**
+   * \brief Updates the stored area.
+   *
+   * \since 0.2.0
+   */
+  constexpr void update_area() noexcept
+  {
+    m_area = compute_area();
+  }
+
+  /**
+   * \brief Fattens the AABB by increasing its size.
+   *
+   * \note This function has no effect if the supplied value is `std::nullopt`.
+   *
+   * \param factor the fattening factor to use.
+   *
+   * \since 0.2.0
+   */
   constexpr void fatten(const std::optional<double> factor)
   {
     if (!factor) {
@@ -272,12 +313,6 @@ class aabb final
   [[nodiscard]] constexpr auto contains(const aabb& other) const noexcept
       -> bool
   {
-    //    if ((other.m_min.x < m_min.x) || (other.m_max.x > m_max.x) ||
-    //        (other.m_min.y < m_min.y) || (other.m_max.y > m_max.y)) {
-    //      return false;
-    //    } else {
-    //      return true;
-    //    }
     for (auto i = 0; i < 2; ++i) {
       if (other.m_min[i] < m_min[i]) {
         return false;
@@ -305,18 +340,6 @@ class aabb final
                                         bool touchIsOverlap) const noexcept
       -> bool
   {
-    //    if (touchIsOverlap) {
-    //      if ((other.m_max.x < m_min.x || other.m_min.x > m_max.x) ||
-    //          (other.m_max.y < m_min.y || other.m_min.y > m_max.y)) {
-    //        return false;
-    //      }
-    //    } else {
-    //      if ((other.m_max.x <= m_min.x || other.m_min.x >= m_max.x) ||
-    //          (other.m_max.y <= m_min.y || other.m_min.y >= m_max.y)) {
-    //        return false;
-    //      }
-    //    }
-    //    return true;
     if (touchIsOverlap) {
       for (auto i = 0; i < 2; ++i) {
         if (other.m_max[i] < m_min[i] || other.m_min[i] > m_max[i]) {
@@ -397,7 +420,7 @@ class aabb final
     return m_max;
   }
 
-  // private: // TODO make private
+ private:
   vector_type m_min;
   vector_type m_max;
   double m_area{};
@@ -675,8 +698,9 @@ class tree final
 
       auto& node = m_nodes.at(nodeIndex);
       node.aabb = aabb;
-      node.aabb.m_area = aabb.compute_area();
-      //    m_nodes[node].aabb.m_centre = m_nodes[node].aabb.computeCentre();
+      node.aabb.update_area();
+      // node.aabb.m_area = aabb.compute_area();
+      // m_nodes[node].aabb.m_centre = m_nodes[node].aabb.computeCentre();
 
       insert_leaf(nodeIndex);
 
@@ -1547,8 +1571,8 @@ class tree final
           aabb_type::merge(m_nodes.at(*left).aabb, m_nodes.at(*right).aabb);
 
       for (auto i = 0; i < 2; ++i) {
-        assert(aabb.m_min[i] == node.aabb.m_min[i]);
-        assert(aabb.m_max[i] == node.aabb.m_max[i]);
+        assert(aabb.min()[i] == node.aabb.min()[i]);
+        assert(aabb.max()[i] == node.aabb.max()[i]);
       }
 
       validate_metrics(left);

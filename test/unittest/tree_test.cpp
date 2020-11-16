@@ -23,29 +23,6 @@ struct dummy_vector final
   {
     return {x - other.x, y - other.y};
   }
-
-  // FIXME remove this requirement for custom vector types
-  [[nodiscard]] auto operator[](const std::size_t index) -> double&
-  {
-    if (index == 0) {
-      return x;
-    } else if (index == 1) {
-      return y;
-    } else {
-      throw std::invalid_argument{"dummy_vector: bad subscript index!"};
-    }
-  }
-
-  [[nodiscard]] auto operator[](const std::size_t index) const -> double
-  {
-    if (index == 0) {
-      return x;
-    } else if (index == 1) {
-      return y;
-    } else {
-      throw std::invalid_argument{"dummy_vector: bad subscript index!"};
-    }
-  }
 };
 
 using tree_t = abby::tree<int>;

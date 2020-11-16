@@ -67,28 +67,6 @@ struct vector2 final
 {
   T x{};  ///< The x-coordinate.
   T y{};  ///< The y-coordinate.
-
-  [[deprecated]] auto operator[](std::size_t index) -> T&
-  {
-    if (index == 0) {
-      return x;
-    } else if (index == 1) {
-      return y;
-    } else {
-      throw std::invalid_argument{"vector2: bad subscript index!"};
-    }
-  }
-
-  [[deprecated]] auto operator[](std::size_t index) const -> const T&
-  {
-    if (index == 0) {
-      return x;
-    } else if (index == 1) {
-      return y;
-    } else {
-      throw std::invalid_argument{"vector2: bad subscript index!"};
-    }
-  }
 };
 
 // clang-format off
@@ -352,8 +330,13 @@ class aabb final
 
       for (auto d2 = 0; d2 < 2; ++d2) {
         if (d1 != d2) {
-          const auto dx = m_max[d2] - m_min[d2];
-          product *= dx;
+          if (d2 == 0) {
+            const auto dx = m_max.x - m_min.x;
+            product *= dx;
+          } else if (d2 == 1) {
+            const auto dx = m_max.y - m_min.y;
+            product *= dx;
+          }
         }
       }
 

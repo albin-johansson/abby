@@ -1494,7 +1494,6 @@ class tree final
 
   void validate() const
   {
-#ifndef NDEBUG
     validate_structure(m_root);
     validate_metrics(m_root);
 
@@ -1509,7 +1508,6 @@ class tree final
 
     assert(height() == compute_height());
     assert((m_nodeCount + freeCount) == m_nodeCapacity);
-#endif
   }
 
   void validate_structure(const maybe_index nodeIndex) const

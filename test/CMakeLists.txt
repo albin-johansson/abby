@@ -3,7 +3,7 @@ project(abby-test)
 
 set(TEST_SOURCES
         unittest/test_main.cpp
-        unittest/aabb_tree_test.cpp
+        unittest/tree_test.cpp
         unittest/vec2_test.cpp
         unittest/aabb_test.cpp)
 
@@ -19,7 +19,13 @@ include(doctest)
 
 target_include_directories(${ABBY_TEST_TARGET}
         PUBLIC unittest
+        PUBLIC lib
         PUBLIC ${INCLUDE_DIR})
 
+add_library(libAABBCC
+        lib/AABB.h
+        lib/AABB.cc)
+
 target_link_libraries(${ABBY_TEST_TARGET}
-        PUBLIC libDoctest)
+        PUBLIC libDoctest
+        PUBLIC libAABBCC)

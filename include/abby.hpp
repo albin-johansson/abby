@@ -932,26 +932,6 @@ class tree final
     return totalArea / rootArea;
   }
 
-  void validate() const
-  {
-#ifndef NDEBUG
-    validate_structure(m_root);
-    validate_metrics(m_root);
-
-    auto freeCount = 0;
-    auto freeIndex = m_nextFreeIndex;
-
-    while (freeIndex != std::nullopt) {
-      assert(freeIndex < m_nodeCapacity);
-      freeIndex = m_nodes[*freeIndex].next;
-      freeCount++;
-    }
-
-    assert(height() == compute_height());
-    assert((m_nodeCount + freeCount) == m_nodeCapacity);
-#endif
-  }
-
   /**
    * \brief Returns the AABB associated with the specified ID.
    *
@@ -1506,6 +1486,26 @@ class tree final
       const auto right = compute_height(node.right);
       return 1 + std::max(left, right);
     }
+  }
+
+  void validate() const
+  {
+#ifndef NDEBUG
+    validate_structure(m_root);
+    validate_metrics(m_root);
+
+    auto freeCount = 0;
+    auto freeIndex = m_nextFreeIndex;
+
+    while (freeIndex != std::nullopt) {
+      assert(freeIndex < m_nodeCapacity);
+      freeIndex = m_nodes[*freeIndex].next;
+      freeCount++;
+    }
+
+    assert(height() == compute_height());
+    assert((m_nodeCount + freeCount) == m_nodeCapacity);
+#endif
   }
 
   void validate_structure(const maybe_index nodeIndex) const

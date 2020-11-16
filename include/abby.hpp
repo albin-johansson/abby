@@ -866,7 +866,14 @@ class tree final
 #endif
   }
 
-  // since 0.2.0
+  /**
+   * \brief Sets the AABB skin thickness factor.
+   *
+   * \param thicknessFactor the skin thickness factor, will be clamped to at
+   * least 0.
+   *
+   * \since 0.2.0
+   */
   void set_thickness_factor(const std::optional<double> thicknessFactor)
   {
     if (thicknessFactor) {

@@ -744,6 +744,23 @@ class tree final
     }
   }
 
+  /**
+   * \brief Updates the AABB associated with the specified ID.
+   *
+   * \note This function has no effect if there is no AABB associated with the
+   * specified ID.
+   *
+   * \param key the ID associated with the AABB that will be replaced.
+   * \param lowerBound the lower-bound position of the AABB (i.e. the position).
+   * \param upperBound the upper-bound position of the AABB.
+   * \param forceReinsert indicates whether or not the AABB is always
+   * reinserted, which wont happen if this is set to `true` and the new AABB is
+   * within the old AABB.
+   *
+   * \return `true` if an AABB was updated; `false` otherwise.
+   *
+   * \since 0.1.0
+   */
   auto update(const key_type& key,
               const vector_type& lowerBound,
               const vector_type& upperBound,

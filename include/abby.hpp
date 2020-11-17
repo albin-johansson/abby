@@ -650,7 +650,7 @@ class tree final
    * specified ID.
    *
    * \param key the ID associated with the AABB that will be replaced.
-   * \param box the new AABB that will be associated with the specified ID.
+   * \param aabb the new AABB that will be associated with the specified ID.
    * \param forceReinsert indicates whether or not the AABB is always
    * reinserted, which wont happen if this is set to `true` and the new AABB is
    * within the old AABB.

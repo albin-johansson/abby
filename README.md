@@ -39,6 +39,10 @@ complexity for collision detection.
       // Obtains an AABB
       const auto& aabb = tree.get_aabb(candidate);
     }
+
+    tree.query_direct(1, [](int candidate) {
+      // invoked for each candidate, can also return true to stop the search
+    });
   
     // Prints the tree using a stream
     tree.print(std::clog);

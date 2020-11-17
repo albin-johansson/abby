@@ -200,6 +200,49 @@ TEST_SUITE("tree")
     }
   }
 
+  TEST_CASE("tree::query_direct")
+  {
+    SUBCASE("Empty tree")
+    {
+      tree_t tree;
+      CHECK_NOTHROW(tree.query_direct(0, [](int i) {
+        DOCTEST_FAIL("Should not get any matches!");
+      }));
+    }
+
+    SUBCASE("Non-empty tree")
+    {
+      tree_t tree;
+      CHECK_NOTHROW(tree.query_direct(1, [](int) {
+        DOCTEST_FAIL("Should have no matches!");
+      }));
+
+      tree.insert(1, {10, 10}, {110, 110});
+      tree.insert(2, {90, 10}, {160, 60});
+      tree.insert(3, {10, 90}, {35, 115});
+
+      int count{0};
+      tree.query_direct(1, [&](int candidate) {
+        ++count;
+      });
+      CHECK(count == 2);
+
+      count = 0;
+      tree.query_direct(1, [&](int candidate) {
+        ++count;
+        return false;
+      });
+      CHECK(count == 2);
+
+      count = 0;
+      tree.query_direct(1, [&](int candidate) {
+        ++count;
+        return true;
+      });
+      CHECK(count == 1);
+    }
+  }
+
   TEST_CASE("tree::get_aabb")
   {
     tree_t tree;

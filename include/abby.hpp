@@ -909,7 +909,7 @@ class tree final
 
         const auto balance = std::abs(m_nodes.at(*node.left).height -
                                       m_nodes.at(*node.right).height);
-        maxBalance = std::max(maxBalance, balance);
+        maxBalance = std::max(maxBalance, static_cast<size_type>(balance));
       }
     }
 

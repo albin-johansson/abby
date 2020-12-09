@@ -9,8 +9,9 @@ namespace {
 
 struct dummy_vector final
 {
-  double x{};
-  double y{};
+  using value_type = double;
+  value_type x{};
+  value_type y{};
 
   [[nodiscard]] auto operator+(const dummy_vector& other) const noexcept
       -> dummy_vector

@@ -23,13 +23,16 @@ probably be one of `float` or `double` (possibly even `long double`).
 
 ## Custom vector type
 
-Since everyone rolls their own custom vector type in their games, it can be very handy to not have to convert vector types everywhere in your game. As such, it's possible to specify the vector type that the `abby::tree` will use. Such a type must feature public members `x` and `y`, along with a public member alias `value_type`.
+Since everyone rolls their own custom vector type in their games, it can be very handy to not have to convert vector types everywhere in your game. As such, it's possible to specify the vector type that the `abby::tree` will use. Such a type must feature public members `x` and `y`, along with a public member alias `value_type`. It also needs to support `operator+` and `operator-`, these criteria shouldn't be an issue for a decent vector implementation.
 
 ```C++
   struct my_vector {
     using value_type = float;
     value_type x;
     value_type y;
+
+    my_vector operator+(const my_vector& other) const;
+    my_vector operator-(const my_vector& other) const;
   };
 
   abby::tree<int, float, my_vector> tree;

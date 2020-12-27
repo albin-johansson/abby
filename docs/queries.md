@@ -55,7 +55,7 @@ it is found. If you want to abort the query, you can return `true` (and return `
     // ...  
   });
 
-  // This query will stop when there are no more candidates or if the lambdas returns true
+  // This query will stop when there are no more candidates or if the lambda returns true
   tree.query_direct(42, [](int candidate) {
     if (candidate == 7) {
       // ...

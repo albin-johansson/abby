@@ -11,6 +11,13 @@ up with quadratic complexity, which isn't very scalable. By using an AABB tree, 
 are stored in a tree according to their position and size, which in turn enables logarithmic
 complexity for collision detection.
 
+## Features
+
+* Two-dimensional AABB tree.
+* Support for custom identifiers associated with AABBs.
+* Support for custom precision, e.g. `float`, `double` or really any numerical type.
+* Support for custom 2D vector type, since everyone rolls their own vector type in their game :wink:
+* Support for non-allocating queries for collision candidates, e.g. using `std::pmr` types with stack buffers.
 ## Example
 
 ```C++

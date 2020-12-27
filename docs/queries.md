@@ -34,7 +34,7 @@ However, the use of `std::vector` means that the collision candidates are stored
   // Give our PMR vector a pointer to our memory resource
   std::pmr::vector<int> candidates{&resource}
 
-  // We then call the query function just like we did with a `std::vector`
+  // We then call the query function just like we did with a std::vector
   tree.query(42, std::back_inserter(candidates));
   for (const auto candidate : candidates) {
     // ...

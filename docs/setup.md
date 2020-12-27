@@ -4,7 +4,7 @@ This document showcases how you could setup your AABB tree to suit your needs.
 
 ## Lean and mean
 
-This approach uses the defaults provided by the abby library, this is of course the simplest approach and should be sufficient for most users. The default precision used is
+This approach uses the defaults provided by the abby library, this is the simplest approach and should be sufficient for most users. The default precision used is
 `double` and the tree will use the `abby::vector2` class as the vector type. By default
 a thickness factor is used when inserting AABBs.
 
@@ -23,7 +23,7 @@ probably be one of `float` or `double` (possibly even `long double`).
 
 ## Custom vector type
 
-Since everyone rolls their own custom vector type in their games, it can be very handy to not have to convert vector types everywhere in your game. As such, it is possibly to specify the vector type that the `abby::tree` will use. Such a type must feature public members `x` and `y`, along with a public member alias `value_type`.
+Since everyone rolls their own custom vector type in their games, it can be very handy to not have to convert vector types everywhere in your game. As such, it's possible to specify the vector type that the `abby::tree` will use. Such a type must feature public members `x` and `y`, along with a public member alias `value_type`.
 
 ```C++
   struct my_vector {

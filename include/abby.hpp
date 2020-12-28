@@ -323,12 +323,10 @@ class aabb final
    */
   [[nodiscard]] constexpr auto compute_area() const noexcept -> double
   {
-    // Sum of "area" of all the sides.
     auto sum = 0.0;
 
-    // hold one dimension constant and multiply by all the other ones.
     for (auto d1 = 0; d1 < 2; ++d1) {
-      auto product = 1.0;  // "Area" of current side.
+      auto product = 1.0;
 
       for (auto d2 = 0; d2 < 2; ++d2) {
         if (d1 != d2) {
@@ -549,18 +547,14 @@ class tree final
               const vector_type& lowerBound,
               const vector_type& upperBound)
   {
-    // Make sure the particle doesn't already exist
     assert(!m_indexMap.count(key));
 
-    // Allocate a new node for the particle
     const auto nodeIndex = allocate_node();
     auto& node = m_nodes.at(nodeIndex);
     node.id = key;
     node.aabb = {lowerBound, upperBound};
     node.aabb.fatten(m_skinThickness);
     node.height = 0;
-    // node.aabb.m_area = node.aabb.compute_area();
-    // m_nodes[node].aabb.m_centre = m_nodes[node].aabb.computeCentre();
 
     insert_leaf(nodeIndex);
     m_indexMap.emplace(key, nodeIndex);
@@ -582,7 +576,7 @@ class tree final
   void erase(const key_type& key)
   {
     if (const auto it = m_indexMap.find(key); it != m_indexMap.end()) {
-      const auto node = it->second;  // Extract the node index.
+      const auto node = it->second;
 
       m_indexMap.erase(it);
 
@@ -605,12 +599,9 @@ class tree final
    */
   void clear()
   {
-    // Iterator pointing to the start of the particle map.
     auto it = m_indexMap.begin();
 
-    // Iterate over the map.
     while (it != m_indexMap.end()) {
-      // Extract the node index.
       const auto nodeIndex = it->second;
 
       assert(nodeIndex < m_nodeCapacity);
@@ -622,7 +613,6 @@ class tree final
       ++it;
     }
 
-    // Clear the particle map.
     m_indexMap.clear();
 
 #ifndef NDEBUG
@@ -675,15 +665,12 @@ class tree final
         return false;
       }
 
-      // Remove the current leaf.
       remove_leaf(nodeIndex);
       aabb.fatten(m_skinThickness);
 
       auto& node = m_nodes.at(nodeIndex);
       node.aabb = aabb;
       node.aabb.update_area();
-      // node.aabb.m_area = aabb.compute_area();
-      // m_nodes[node].aabb.m_centre = m_nodes[node].aabb.computeCentre();
 
       insert_leaf(nodeIndex);
 
@@ -764,7 +751,7 @@ class tree final
 
     for (auto index = 0; index < m_nodeCapacity; ++index) {
       auto& node = m_nodes.at(index);
-      if (node.height < 0) {  // Free node.
+      if (node.height < 0) {
         continue;
       }
 
@@ -909,9 +896,6 @@ class tree final
   {
     size_type maxBalance{0};
     for (auto i = 0; i < m_nodeCapacity; ++i) {
-      // if (node.height <= 1) {
-      //   continue;
-      // }
       const auto& node = m_nodes.at(i);
       if (node.height > 2) {
         assert(!node.is_leaf());
@@ -1115,7 +1099,6 @@ class tree final
       grow_pool();
     }
 
-    // Peel a node off the free list.
     const auto nodeIndex = m_nextFreeIndex.value();
     auto& node = m_nodes.at(nodeIndex);
 
@@ -1124,7 +1107,6 @@ class tree final
     node.left = std::nullopt;
     node.right = std::nullopt;
     node.height = 0;
-    // node.aabb.set_dimension(dimension);
     ++m_nodeCount;
 
     return nodeIndex;
@@ -1199,7 +1181,6 @@ class tree final
         break;
       }
 
-      // Descend.
       if (costLeft < costRight) {
         index = left;
       } else {
@@ -1279,7 +1260,6 @@ class tree final
     auto& newParent = m_nodes.at(newParentIndex);
     newParent.parent = oldParentIndex;
     newParent.aabb = aabb_type::merge(leafAabb, m_nodes.at(siblingIndex).aabb);
-    // m_nodes[newParent].aabb.merge(leafAABB, m_nodes[sibling].aabb);
     newParent.height = m_nodes.at(siblingIndex).height + 1;
 
     if (oldParentIndex != std::nullopt) {  // The sibling was not the root.

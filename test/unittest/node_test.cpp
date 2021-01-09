@@ -13,10 +13,10 @@ TEST_SUITE("node")
   {
     const node_t node;
     CHECK(!node.id);
-    CHECK(node.aabb.min().x == 0);
-    CHECK(node.aabb.min().y == 0);
-    CHECK(node.aabb.max().x == 0);
-    CHECK(node.aabb.max().y == 0);
+    CHECK(node.box.min().x == 0);
+    CHECK(node.box.min().y == 0);
+    CHECK(node.box.max().x == 0);
+    CHECK(node.box.max().y == 0);
     CHECK(node.height == -1);
     CHECK(!node.parent);
     CHECK(!node.left);
